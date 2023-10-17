@@ -229,15 +229,13 @@ def read_file_from_s3(bucket_name, file_name):
 
 if __name__ == "__main__":
     directory = "/root/dns_project/"
-    # directory = "/home/peter/Downloads/"
+    download_path = "/root/dns_project/"
+    extract_dir = "/root/dns_project/"
+    #directory = "/home/peter/Downloads/"
+    #download_path = "/home/peter/Downloads/"
+    #extract_dir = "/home/peter/Downloads/"
     bucket_name = "domain-monitor"
     file_key = "domain_update_daily2023-10-16-05-27-18.zip"
-
-    # Path to save the downloaded zip file (this could be /tmp if you're running on AWS Lambda)
-    download_path = "/root/dns_project/"
-    # download_path = "/home/peter/Downloads/"
-    extract_dir = "/root/dns_project/"
-    # extract_dir = "/home/peter/Downloads/"
     csv_file_name = "domains-detailed-update.csv"
 
     session = boto3.session.Session()
