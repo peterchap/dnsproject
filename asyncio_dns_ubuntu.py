@@ -20,7 +20,8 @@ headers = {
     "X-Amzn-Trace-Id": "Root=1-652d212a-22698af848e661fa00c61e34",
 }
 
-dns_provider = ["192.168.1.221"]
+# dns_provider = ["192.168.1.221"]
+dns_provider = ["127.0.0.1"]
 resolver = dns.asyncresolver.Resolver()
 resolver.nameservers = dns_provider
 resolver.lifetime = 3.0
