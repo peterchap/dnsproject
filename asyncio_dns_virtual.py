@@ -1,9 +1,9 @@
-""" use to list of domains to make DNS requests concurrently and save responses to disk."""
 import asyncio
 import dns.asyncresolver
 import time
 import pandas as pd
 import pyarrow as pa
+import pyarrow.parquet as pq
 import re
 import csv
 import boto3
@@ -72,7 +72,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/home/peter/Downloads/"
+    directory = "/root/dns_project/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -229,41 +229,44 @@ def read_file_from_s3(bucket_name, file_name):
     return data
 
 
+def write_dataframe_to_s3_parquet(df, bucket, key, s3_client=None):
+    """Write a dataframe to S3 in Parquet format.
+    :param df: DataFrame to write.
+    :param bucket: S3 bucket name.
+    :param key: S3 key for the file (path + filename).
+    :param s3_client: Pre-configured boto3 S3 client.
+    """
+    if s3_client is None:
+        s3_client = boto3.client("s3")
+
+    # Convert DataFrame to Parquet
+    parquet_buffer = BytesIO()
+    df.to_parquet(parquet_buffer, index=False, engine="pyarrow")
+
+    # Reset buffer cursor
+    parquet_buffer.seek(0)
+
+    # Upload the Parquet file to S3
+    s3_client.put_object(Bucket=bucket, Key=key, Body=parquet_buffer.getvalue())
+    LOGGER.info(f"File uploaded to S3 bucket {bucket} at {key}")
+    print(f"File uploaded to S3 bucket {bucket} at {key}")
+
+
 if __name__ == "__main__":
     directory = "/root/dns_project/"
     # directory = "/home/peter/Downloads/"
     # download_path = "/home/peter/Downloads/"
     # extract_dir = "/home/peter/Downloads/"
-    bucket_name = "domain-monitor"
-    file_key = "domain_update_daily2023-10-16-05-27-18.zip"
-    csv_file_name = "domains-detailed-update.csv"
+    bucket_name = "domain-monitor-results"
+    file_key = "dm_0.parquet"
 
     session = boto3.session.Session()
     client = session.client("s3")
     client.download_file(bucket_name, file_key, directory + file_key)
-    with zipfile.ZipFile(directory + file_key, "r") as zip_ref:
-        for member in zip_ref.namelist():
-            if csv_file_name in member:
-                zip_ref.extract(member, path=directory)
-                break
 
     cols = ["domain", "ns", "ip", "country", "web_server", "Alexa_rank"]
 
-    read_options = csv.ReadOptions(
-        use_threads=True, autogenerate_column_names=True, encoding="utf-8"
-    )
-    parse_options = csv.ParseOptions(
-        delimiter=";",
-        quote_char='"',
-        ignore_empty_lines=False,
-    )
-    table = csv.read_csv(
-        directory + csv_file_name,
-        read_options=read_options,
-        parse_options=parse_options,
-    )
-    table = table.drop_columns(["f5", "f7"])
-    table = table.rename_columns(cols)
+    table = pq.read_table(directory + file_key)
     # df = pd.read_parquet(directory + file, engine='auto', columns=['name'])
     # print('df', df.shape)
     urls_to_fetch = table["domain"].to_pylist()
@@ -316,28 +319,6 @@ if __name__ == "__main__":
     print("Elapsed time: ", time.time() - start_time)
 
     # read in arrow file and convert to parquet and export to s3
-
-    def write_dataframe_to_s3_parquet(df, bucket, key, s3_client=None):
-        """Write a dataframe to S3 in Parquet format.
-        :param df: DataFrame to write.
-        :param bucket: S3 bucket name.
-        :param key: S3 key for the file (path + filename).
-        :param s3_client: Pre-configured boto3 S3 client.
-        """
-        if s3_client is None:
-            s3_client = boto3.client("s3")
-
-        # Convert DataFrame to Parquet
-        parquet_buffer = BytesIO()
-        df.to_parquet(parquet_buffer, index=False, engine="pyarrow")
-
-        # Reset buffer cursor
-        parquet_buffer.seek(0)
-
-        # Upload the Parquet file to S3
-        s3_client.put_object(Bucket=bucket, Key=key, Body=parquet_buffer.getvalue())
-        LOGGER.info(f"File uploaded to S3 bucket {bucket} at {key}")
-        print(f"File uploaded to S3 bucket {bucket} at {key}")
 
     s3_bucket = "domain-monitor-results"
     s3_key = "domains_added.parquet"
