@@ -26,7 +26,7 @@ dns_provider = ["127.0.0.1"]
 resolver = dns.asyncresolver.Resolver()
 resolver.nameservers = dns_provider
 resolver.lifetime = 3.0
-resolver.timeout = 1.0
+resolver.timeout = 3.0
 
 
 def formatter(log: dict) -> str:
@@ -84,33 +84,32 @@ date = date.today().strftime("%Y-%m-%d")
 
 async def execute_fetcher_tasks(urls_select: List[str], batch: int, total_count: int):
     start_time = timer()
-    # print("batch: ", len(urls_to_fetch))
-    async with asyncio.TaskGroup() as g:
-        tasks = set()
-        for i, url in enumerate(urls_select):
-            task = g.create_task(fetch_url(url, batch, total_count, i))
-            tasks.add(task)
-        results = []
-        keys = [
-            "domain",
-            "cname",
-            "mx",
-            "www",
-            "wwwptr",
-            "wwwcname",
-            "mail",
-            "mailptr",
-            "date",
-        ]
-        for t in tasks:
-            data = await t
-            res = {keys[y]: data[y] for y in range(9)}
-            results.append(res)
-        df = pd.DataFrame(results)
-        # (print("check ", df.shape))
-    LOGGER.success(
-        f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds."
-    )
+    async with asyncio.Semaphore(1000):
+        async with asyncio.TaskGroup() as g:
+            tasks = set()
+            for i, url in enumerate(urls_select):
+                task = g.create_task(fetch_url(url, batch, total_count, i))
+                tasks.add(task)
+            results = []
+            keys = [
+                "domain",
+                "cname",
+                "mx",
+                "www",
+                "wwwptr",
+                "wwwcname",
+                "mail",
+                "mailptr",
+                "date",
+            ]
+            for t in tasks:
+                data = await t
+                res = {keys[y]: data[y] for y in range(9)}
+                results.append(res)
+            df = pd.DataFrame(results)
+            # (print("check ", df.shape))
+        # LOGGER.success(
+        #    f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
     return df
 
 
@@ -130,7 +129,7 @@ async def fetch_url(domain: str, batch: int, total_count: int, i: int):
     www, wwwptr, wwwcname = await get_www(domain)
     mail, mailptr = await get_mail(domain)
 
-    LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
+    # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
 
     return [domain, cname, mx, www, wwwptr, wwwcname, mail, mailptr, date]
 
@@ -235,24 +234,15 @@ if __name__ == "__main__":
     # directory = "/home/peter/Downloads/"
     bucket_name = "domain-monitor"
     file_key = "domain_update_daily2023-10-16-05-27-18.zip"
-
-    # Path to save the downloaded zip file (this could be /tmp if you're running on AWS Lambda)
-    download_path = "/root/dns_project/"
-    # download_path = "/home/peter/Downloads/"
-    extract_dir = "/root/dns_project/"
-    # extract_dir = "/home/peter/Downloads/"
     csv_file_name = "domains-detailed-update.csv"
 
     session = boto3.session.Session()
     client = session.client("s3")
     client.download_file(bucket_name, file_key, directory + file_key)
-    # region_name='your-region',  # e.g., us-west-1
-    # aws_access_key_id='your-access-key',
-    # aws_secret_access_key='your-secret-key')
     with zipfile.ZipFile(directory + file_key, "r") as zip_ref:
         for member in zip_ref.namelist():
             if csv_file_name in member:
-                zip_ref.extract(member, path=extract_dir)
+                zip_ref.extract(member, path=directory)
                 break
 
     cols = ["domain", "ns", "ip", "country", "web_server", "Alexa_rank"]
