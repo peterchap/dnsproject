@@ -4,6 +4,7 @@ import dns.asyncresolver
 import time
 import pandas as pd
 import pyarrow as pa
+import re
 import csv
 import boto3
 import zipfile
@@ -122,6 +123,8 @@ async def fetch_url(domain: str, batch: int, total_count: int, i: int):
     :param int total_count: Total number of URLs to be fetched.
     :param int i: Current iteration of URL out of total URLs.
     """
+    valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
+    domain = valid_pattern.sub("", domain)
     cname = await get_cname(domain)
     mx = await get_mx(domain)
     www, wwwptr, wwwcname = await get_www(domain)
