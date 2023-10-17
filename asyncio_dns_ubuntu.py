@@ -83,7 +83,7 @@ date = date.today().strftime("%Y-%m-%d")
 
 
 async def execute_fetcher_tasks(urls_select: List[str], batch: int, total_count: int):
-    start_time = timer()
+    # start_time = timer()
     async with asyncio.Semaphore(1000):
         async with asyncio.TaskGroup() as g:
             tasks = set()
@@ -231,11 +231,9 @@ def read_file_from_s3(bucket_name, file_name):
 
 if __name__ == "__main__":
     directory = "/root/dns_project/"
-    download_path = "/root/dns_project/"
-    extract_dir = "/root/dns_project/"
-    #directory = "/home/peter/Downloads/"
-    #download_path = "/home/peter/Downloads/"
-    #extract_dir = "/home/peter/Downloads/"
+    # directory = "/home/peter/Downloads/"
+    # download_path = "/home/peter/Downloads/"
+    # extract_dir = "/home/peter/Downloads/"
     bucket_name = "domain-monitor"
     file_key = "domain_update_daily2023-10-16-05-27-18.zip"
     csv_file_name = "domains-detailed-update.csv"
