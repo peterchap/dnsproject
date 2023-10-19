@@ -27,7 +27,7 @@ resolver = dns.asyncresolver.Resolver()
 resolver.nameservers = dns_provider
 resolver.lifetime = 10.0
 resolver.timeout = 10.0
-
+semaphore  =  asyncio.Semaphore(1000)
 
 def formatter(log: dict) -> str:
     """
@@ -82,38 +82,39 @@ LOGGER = create_logger()
 date = date.today().strftime("%Y-%m-%d")
 
 
-async def execute_fetcher_tasks(urls_select: List[str], batch: int, total_count: int):
+async def execute_fetcher_tasks(urls_select: List[str], semaphore, batch: int, total_count: int):
     # start_time = timer()
 
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
-            task = g.create_task(fetch_url(url, batch, total_count, i))
-            tasks.add(task)
+            async with semaphore:
+                task = g.create_task(fetch_url(url, batch, total_count, i))
+            	tasks.add(task)
         results = []
         keys = [
-            "domain",
-            "cname",
-            "mx",
-            "www",
-            "wwwptr",
-            "wwwcname",
-            "mail",
-            "mailptr",
-            "date",
-        ]
+         "domain",
+         "cname",
+         "mx",
+         "www",
+         "wwwptr",
+         "wwwcname",
+         "mail",
+         "mailptr",
+         "date",
+         ]
         for t in tasks:
             data = await t
             res = {keys[y]: data[y] for y in range(9)}
             results.append(res)
         df = pd.DataFrame(results)
         # (print("check ", df.shape))
-        # LOGGER.success(
-        #    f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
-    return df
+         LOGGER.success(
+          f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
+    	return df
 
 
-async def fetch_url(domain: str, batch: int, total_count: int, i: int):
+async def fetch_url(domain: str, semaphore, batch: int, total_count: int, i: int):
     """
     Fetch raw HTML from a URL prior to parsing.
     :param ClientSession session: Async HTTP requests session.
@@ -122,16 +123,17 @@ async def fetch_url(domain: str, batch: int, total_count: int, i: int):
     :param int total_count: Total number of URLs to be fetched.
     :param int i: Current iteration of URL out of total URLs.
     """
-    valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
-    domain = valid_pattern.sub("", domain)
-    cname = await get_cname(domain)
-    mx = await get_mx(domain)
-    www, wwwptr, wwwcname = await get_www(domain)
-    mail, mailptr = await get_mail(domain)
+    async with semaphore:
+    	valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
+    	domain = valid_pattern.sub("", domain)
+    	cname = await get_cname(domain)
+    	mx = await get_mx(domain)
+    	www, wwwptr, wwwcname = await get_www(domain)
+    	mail, mailptr = await get_mail(domain)
 
-    # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
+    	# LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
 
-    return [domain, cname, mx, www, wwwptr, wwwcname, mail, mailptr, date]
+    	return [domain, cname, mx, www, wwwptr, wwwcname, mail, mailptr, date]
 
 
 async def get_cname(domain):
@@ -304,11 +306,11 @@ if __name__ == "__main__":
         with pa.ipc.new_stream(sink, schema) as writer:
             start = 0
             batchcount = 0
-            step = 10000
+            step = 25000
             for i in range(0, len, step):
                 df = asyncio.run(
                     execute_fetcher_tasks(
-                        urls_to_fetch[start : i + step], batchcount, len
+                        urls_to_fetch[start : i + step], semaphore, batchcount, len
                     )
                 )
                 batch = pa.RecordBatch.from_pandas(df)
