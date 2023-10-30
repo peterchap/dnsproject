@@ -26,8 +26,8 @@ headers = {
 dns_provider = ["127.0.0.1"]
 resolver = dns.asyncresolver.Resolver()
 resolver.nameservers = dns_provider
-resolver.lifetime = 10.0
-resolver.timeout = 10.0
+resolver.lifetime = 2.0
+resolver.timeout = 2.0
 
 
 def formatter(log: dict) -> str:
@@ -85,7 +85,7 @@ date = date.today().strftime("%Y-%m-%d")
 
 async def execute_fetcher_tasks(urls_select: List[str], batch: int, total_count: int):
     # start_time = timer()
-    limiter = AsyncLimiter(50)
+    limiter = AsyncLimiter(100,1)
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
@@ -110,8 +110,8 @@ async def execute_fetcher_tasks(urls_select: List[str], batch: int, total_count:
             results.append(res)
         df = pd.DataFrame(results)
         # (print("check ", df.shape))
-        LOGGER.success(
-          f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
+        #LOGGER.success(
+        #  f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
     return df
 
 
@@ -308,7 +308,7 @@ if __name__ == "__main__":
         with pa.ipc.new_stream(sink, schema) as writer:
             start = 0
             batchcount = 0
-            step = 25000
+            step = 50000
             for i in range(0, len, step):
                 df = asyncio.run(
                     execute_fetcher_tasks(
@@ -319,7 +319,7 @@ if __name__ == "__main__":
                 writer.write_batch(batch)
                 start = i + step
                 batchcount = batchcount + step
-    LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
+                LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
     # read in arrow file and convert to parquet and export to s3
