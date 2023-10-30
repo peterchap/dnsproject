@@ -7,3 +7,5 @@ loguru
 pandas
 pyarrow
 typing
+aiolimiter
+zipfile
