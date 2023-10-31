@@ -258,8 +258,6 @@ if __name__ == "__main__":
     directory = "~/dnsproject/"
     bucket_name = "domain-monitor-results"
     file_key = "dns_input.parquet"
-    host = os.uname()[1]
-    hostname =hos.split(".")[0]
     session = boto3.session.Session()
     client = session.client("s3")
     client.download_file(bucket_name, file_key, directory + file_key)
