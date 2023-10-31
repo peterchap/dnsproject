@@ -8,6 +8,7 @@ import re
 import csv
 import boto3
 import zipfile
+import os
 
 from time import perf_counter as timer
 from typing import List
@@ -18,11 +19,9 @@ from io import BytesIO
 from aiolimiter import AsyncLimiter
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/118.0",
-    "X-Amzn-Trace-Id": "Root=1-652d212a-22698af848e661fa00c61e34",
+    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0"
 }
 
-# dns_provider = ["192.168.1.221"]
 dns_provider = ["127.0.0.1"]
 resolver = dns.asyncresolver.Resolver()
 resolver.nameservers = dns_provider
@@ -256,22 +255,18 @@ def write_dataframe_to_s3_parquet(df, bucket, key, s3_client=None):
 
 
 if __name__ == "__main__":
-    directory = "/root/dns_project/"
-    # directory = "/home/peter/Downloads/"
-    # download_path = "/home/peter/Downloads/"
-    # extract_dir = "/home/peter/Downloads/"
+    directory = "/root/dnsproject/"
     bucket_name = "domain-monitor-results"
-    file_key = "dm_0.parquet"
-
+    file_key = "dns_input.parquet"
+    host = os.uname()[1]
+    hostname =hos.split(".")[0]
     session = boto3.session.Session()
     client = session.client("s3")
     client.download_file(bucket_name, file_key, directory + file_key)
 
     cols = ["domain", "ns", "ip", "country", "web_server", "Alexa_rank"]
 
-    table = pq.read_table(directory + file_key)
-    # df = pd.read_parquet(directory + file, engine='auto', columns=['name'])
-    # print('df', df.shape)
+    table = pq.read_table(directory + file_key)hostname
     allurls = table["domain"].to_pylist()
     urls_to_fetch = [value.rstrip(".") if isinstance(value, str) else value for value in allurls]
     print(len(urls_to_fetch))
@@ -325,12 +320,14 @@ if __name__ == "__main__":
     # read in arrow file and convert to parquet and export to s3
 
     s3_bucket = "domain-monitor-results"
-    s3_key = "domains_added.parquet"
+    host = os.uname()[1]
+    hostname = host.split(".")[0]
+    s3_filename = f"dns_result_{hostname}_{time:0.0f}.parquet"
+    s3_key = s3_filename
     with pa.ipc.open_stream(directory + "domains_all.arrow") as reader:
         print(reader.schema)
         # for batch in reader:
 
         df = reader.read_pandas()
-    # df.to_csv(directory + "arrowtest.csv", index=False)  # print(len(batches2))
     print(df.shape)
     write_dataframe_to_s3_parquet(df, s3_bucket, s3_key)
