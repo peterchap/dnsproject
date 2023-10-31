@@ -260,7 +260,7 @@ if __name__ == "__main__":
     file_key = "dns_input.parquet"
     session = boto3.session.Session()
     client = session.client("s3")
-    client.download_file(bucket_name, file_key, directory + file_key)
+    #client.download_file(bucket_name, file_key, directory + file_key)
 
     cols = ["domain", "ns", "ip", "country", "web_server", "Alexa_rank"]
 
