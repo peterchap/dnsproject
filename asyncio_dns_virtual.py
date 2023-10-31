@@ -266,7 +266,7 @@ if __name__ == "__main__":
 
     cols = ["domain", "ns", "ip", "country", "web_server", "Alexa_rank"]
 
-    table = pq.read_table(directory + file_key)hostname
+    table = pq.read_table(directory + file_key)
     allurls = table["domain"].to_pylist()
     urls_to_fetch = [value.rstrip(".") if isinstance(value, str) else value for value in allurls]
     print(len(urls_to_fetch))
