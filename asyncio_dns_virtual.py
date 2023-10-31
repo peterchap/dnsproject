@@ -255,7 +255,7 @@ def write_dataframe_to_s3_parquet(df, bucket, key, s3_client=None):
 
 
 if __name__ == "__main__":
-    directory = "/root/dnsproject/"
+    directory = "~/dnsproject/"
     bucket_name = "domain-monitor-results"
     file_key = "dns_input.parquet"
     host = os.uname()[1]
