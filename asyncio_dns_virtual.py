@@ -320,7 +320,8 @@ if __name__ == "__main__":
     s3_bucket = "domain-monitor-results"
     host = os.uname()[1]
     hostname = host.split(".")[0]
-    s3_filename = f"dns_result_{hostname}_{time:0.0f}.parquet"
+    timestamp = time.time()
+    s3_filename = f"dns_result_{hostname}_{timestamp:0.0f}.parquet"
     s3_key = s3_filename
     with pa.ipc.open_stream(directory + "domains_all.arrow") as reader:
         print(reader.schema)
