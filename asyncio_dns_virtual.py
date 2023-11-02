@@ -256,10 +256,10 @@ def write_dataframe_to_s3_parquet(df, bucket, key, s3_client=None):
 
 if __name__ == "__main__":
     directory = "/root/dnsproject/"
-    bucket_name = "domain-monitor-results"
+    #bucket_name = "domain-monitor-results"
     file_key = "dns_input.parquet"
-    session = boto3.session.Session()
-    client = session.client("s3")
+    #session = boto3.session.Session()
+    #client = session.client("s3")
     #client.download_file(bucket_name, file_key, directory + file_key)
 
     cols = ["domain", "ns", "ip", "country", "web_server", "Alexa_rank"]
