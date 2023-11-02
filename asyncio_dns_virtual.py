@@ -1,7 +1,7 @@
 import asyncio
 import dns.asyncresolver
 import time
-#import pandas as pd
+import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import re
