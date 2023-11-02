@@ -1,12 +1,12 @@
 import asyncio
 import dns.asyncresolver
 import time
-import pandas as pd
+#import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import re
 import csv
-import boto3
+#import boto3
 import zipfile
 import os
 
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     print("Elapsed time: ", time.time() - start_time)
 
     # read in arrow file and convert to parquet and export to s3
-
+'''
     s3_bucket = "domain-monitor-results"
     host = os.uname()[1]
     hostname = host.split(".")[0]
@@ -327,6 +327,7 @@ if __name__ == "__main__":
         print(reader.schema)
         # for batch in reader:
 
-        df = reader.read_pandas()
-    print(df.shape)
-    write_dataframe_to_s3_parquet(df, s3_bucket, s3_key)
+    #    df = reader.read_pandas()
+    #print(df.shape)
+    #write_dataframe_to_s3_parquet(df, s3_bucket, s3_key)
+'''
