@@ -8,3 +8,4 @@ pandas
 pyarrow
 typing
 aiolimiter
+s3fs
