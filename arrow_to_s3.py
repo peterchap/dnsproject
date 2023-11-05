@@ -13,7 +13,8 @@ def arrow_to_s3_parquet(arrow_file_path, s3_bucket_name, s3_parquet_key):
 
     fs =s3fs.S3FileSystem(anon=False)
     s3_path = f"s3://{s3_bucket_name}/{s3_parquet_key}"
-    pq.write_table(table, fs.open(s3_path, "wb"))
+    with fs.open(s3_path, "wb") as s3_file:
+        pq.write_table(table, s3_file)
 
 directory = "/root/dnsproject/"
 file = "domains_all.arrow"
