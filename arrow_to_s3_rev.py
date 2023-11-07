@@ -3,31 +3,21 @@ import os
 import time
 import pyarrow as pa
 import pyarrow.parquet as pq
-
+import s3fs
 
 # Function to convert Arrow file to Parquet and upload to S3
 def arrow_to_s3_parquet(arrow_file_path, s3_bucket_name, s3_parquet_key):
     # Read the Arrow file from disk
-    with pa.memory_map(arrow_file_path, "rb") as f:
-        table = pa.ipc.open_file(f).read_all()
-        # table = arrow_file.read_all()
+    with pa.ipc.open_stream(arrow_file_path) as f:
+        table = f.read_all()
 
-    # Convert Arrow Table to Parquet
-    parquet_buffer = pa.BufferOutputStream()
-    pq.write_table(table, parquet_buffer)
-    parquet_data = parquet_buffer.getvalue()
-
-    # Get S3 client
-    s3_client = boto3.client("s3")
-
-    # Upload the Parquet file to S3
-    s3_client.put_object(Bucket=s3_bucket_name, Key=s3_parquet_key, Body=parquet_data)
-
+    fs =s3fs.S3FileSystem(anon=False)
+    s3_path = f"s3://{s3_bucket_name}/{s3_parquet_key}"
+    pq.write_table(table, fs.open(s3_path, "wb"))
 
 directory = "/root/dnsproject/"
 file = "domains_all.arrow"
-session = boto3.session.Session()
-client = session.client("s3")
+
 s3_bucket = "domain-monitor-results"
 host = os.uname()[1]
 hostname = host.split(".")[0]
