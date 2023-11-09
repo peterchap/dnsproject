@@ -3,7 +3,6 @@ import dns.asyncresolver
 import time
 import pandas as pd
 import re
-import csv
 
 import os
 import datetime
@@ -70,7 +69,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/root/dns_project/"
+    directory = "/home/peter/Documents/dnsproject/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -276,8 +275,10 @@ def get_create_date(filename):
 
 
 if __name__ == "__main__":
-    directory = "/root/updates/"
-    output = "/root/dnsproject/"
+    #directory = "/root/updates/"
+    #output = "/root/dnsproject/"
+    directory = "/home/peter/Documents/updates/"
+    output = "/home/peter/Documents/dnsproject/"
     start_time = time.time()
 
     # download_path = "/home/peter/Downloads/"
@@ -290,8 +291,9 @@ if __name__ == "__main__":
         len = df.shape[0]
         df = asyncio.run(execute_fetcher_tasks(urls_to_fetch, create_date, len))
         final = pd.concat([final, df])
+        print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(directory + "domains_updates.parquet")
+    final.to_parquet(directory + "domains_updates.parquet", engine= 'fastparquet')
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
