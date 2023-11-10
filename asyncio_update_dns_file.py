@@ -105,7 +105,7 @@ async def execute_fetcher_tasks(urls_select: List[str], batch: int, total_count:
          ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(10)}
+            res = {keys[y]: data[y] for y in range(11)}
             results.append(res)
         df = pd.DataFrame(results)
         # (print("check ", df.shape))
@@ -303,6 +303,7 @@ if __name__ == "__main__":
                         urls_to_fetch[start : i + step], batchcount, len
                     )
                 )
+                print(df.columns, df.dtypes)
                 batch = pa.RecordBatch.from_pandas(df)
                 writer.write_batch(batch)
                 start = i + step
