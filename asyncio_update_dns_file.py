@@ -144,7 +144,7 @@ async def get_A(domain):
         for rr in result:
             a.append(rr.to_text())
     except Exception as e:
-        a = "No A"
+        a = ["No A"]
     return a
 
 async def get_cname(domain):
@@ -241,11 +241,11 @@ async def get_spf(domain):
         for rr in result:
             # print(domain, rr.text)
             if "spf" in rr.text.lower():
-                spf = rr.text
+                spf = [rr.text]
         if spf is None:
-            spf = "No SPF"
+            spf = ["No SPF"]
     except Exception as e:
-        spf = "Null"
+        spf = ["Null"]
     return spf
 
 
@@ -283,7 +283,7 @@ if __name__ == "__main__":
             pa.field("a", pa.list_(t2)),
             pa.field("cname", pa.list_(t2)),
             pa.field("mx", pa.list_(t2)),
-            pa.field("spf", pa.string()),
+            pa.field("spf", pa.list_(t2)),
             pa.field("www", pa.list_(t2)),
             pa.field("wwwptr", pa.list_(t2)),
             pa.field("wwwcname", pa.list_(t2)),
