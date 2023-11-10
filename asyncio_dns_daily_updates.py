@@ -276,10 +276,10 @@ def get_create_date(filename):
 
 
 if __name__ == "__main__":
-    #directory = "/root/updates/"
-    #output = "/root/dnsproject/"
-    directory = "/home/peter/Documents/updates/"
-    output = "/home/peter/Documents/dnsproject/"
+    directory = "/root/updates/"
+    output = "/root/dnsproject/"
+    #directory = "/home/peter/Documents/updates/"
+    #output = "/home/peter/Documents/dnsproject/"
     start_time = time.time()
 
     # download_path = "/home/peter/Downloads/"
