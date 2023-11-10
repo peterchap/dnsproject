@@ -91,7 +91,8 @@ async def execute_fetcher_tasks(urls_select: List[str], create_date, total_count
         results = []
         keys = [
             "domain",
-            "a" "cname",
+            "a",
+            "cname",
             "mx",
             "spf",
             "www",
