@@ -135,7 +135,7 @@ async def fetch_url(domain: str, batch: int, total_count: int, i: int):
 
     # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
 
-    return [domain, cname, mx, www, wwwptr, wwwcname, mail, mailptr, date]
+    return [domain, a, cname, mx, spf, www, wwwptr, wwwcname, mail, mailptr, date]
 
 async def get_A(domain):
     try:
