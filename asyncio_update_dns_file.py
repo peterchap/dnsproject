@@ -105,7 +105,7 @@ async def execute_fetcher_tasks(urls_select: List[str], batch: int, total_count:
          ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(9)}
+            res = {keys[y]: data[y] for y in range(11)}
             results.append(res)
         df = pd.DataFrame(results)
         # (print("check ", df.shape))
@@ -135,7 +135,7 @@ async def fetch_url(domain: str, batch: int, total_count: int, i: int):
 
     # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
 
-    return [domain, cname, mx, www, wwwptr, wwwcname, mail, mailptr, date]
+    return [domain, a, cname, mx, spf, www, wwwptr, wwwcname, mail, mailptr, date]
 
 async def get_A(domain):
     try:
@@ -144,7 +144,7 @@ async def get_A(domain):
         for rr in result:
             a.append(rr.to_text())
     except Exception as e:
-        a = "No A"
+        a = ["No A"]
     return a
 
 async def get_cname(domain):
@@ -303,6 +303,7 @@ if __name__ == "__main__":
                         urls_to_fetch[start : i + step], batchcount, len
                     )
                 )
+                print(df.columns, df.dtypes)
                 batch = pa.RecordBatch.from_pandas(df)
                 writer.write_batch(batch)
                 start = i + step

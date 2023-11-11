@@ -69,7 +69,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/home/peter/Documents/dnsproject/"
+    directory = "/root/dnsproject/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -91,7 +91,8 @@ async def execute_fetcher_tasks(urls_select: List[str], create_date, total_count
         results = []
         keys = [
             "domain",
-            "a" "cname",
+            "a",
+            "cname",
             "mx",
             "spf",
             "www",
@@ -99,14 +100,16 @@ async def execute_fetcher_tasks(urls_select: List[str], create_date, total_count
             "wwwcname",
             "mail",
             "mailptr",
-            "Domain_date",
-            "Create_date",
+            "domain_date",
+            "create_date",
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(11)}
+            res = {keys[y]: data[y] for y in range(12)}
             results.append(res)
         df = pd.DataFrame(results)
+        df['domain_date'] = pd.to_datetime(df['domain_date'])
+        df['create_date'] = pd.to_datetime(df['create_date'])                                   
         # (print("check ", df.shape))
         # LOGGER.success(
         #  f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
@@ -159,7 +162,7 @@ async def get_A(domain):
         for rr in result:
             a.append(rr.to_text())
     except Exception as e:
-        a = "No A"
+        a = ["No A"]
     return a
 
 
@@ -275,10 +278,10 @@ def get_create_date(filename):
 
 
 if __name__ == "__main__":
-    #directory = "/root/updates/"
-    #output = "/root/dnsproject/"
-    directory = "/home/peter/Documents/updates/"
-    output = "/home/peter/Documents/dnsproject/"
+    directory = "/root/updates/"
+    output = "/root/dnsproject/"
+    #directory = "/home/peter/Documents/updates/"
+    #output = "/home/peter/Documents/dnsproject/"
     start_time = time.time()
 
     # download_path = "/home/peter/Downloads/"
@@ -293,7 +296,7 @@ if __name__ == "__main__":
         final = pd.concat([final, df])
         print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(directory + "domains_updates.parquet", engine= 'fastparquet')
+    final.to_parquet(output + "domains_updates.parquet", engine= 'fastparquet')
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
