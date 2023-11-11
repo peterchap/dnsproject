@@ -69,7 +69,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/home/peter/Documents/dnsproject/"
+    directory = "/root/dnsproject/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -105,7 +105,7 @@ async def execute_fetcher_tasks(urls_select: List[str], create_date, total_count
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(11)}
+            res = {keys[y]: data[y] for y in range(12)}
             results.append(res)
         df = pd.DataFrame(results)
         # (print("check ", df.shape))
@@ -160,7 +160,7 @@ async def get_A(domain):
         for rr in result:
             a.append(rr.to_text())
     except Exception as e:
-        a = "No A"
+        a = ["No A"]
     return a
 
 
@@ -294,7 +294,7 @@ if __name__ == "__main__":
         final = pd.concat([final, df])
         print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(directory + "domains_updates.parquet", engine= 'fastparquet')
+    final.to_parquet(output + "domains_updates.parquet", engine= 'fastparquet')
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
