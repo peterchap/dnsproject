@@ -79,14 +79,14 @@ LOGGER = create_logger()
 date = date.today().strftime("%Y-%m-%d")
 
 
-async def execute_fetcher_tasks(urls_select: List[str], filename, total_count: int):
+async def execute_fetcher_tasks(urls_select: List[str], filename: str, total_count: int):
     # start_time = timer()
     limiter = AsyncLimiter(100, 1)
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
             async with limiter:
-                task = g.create_task(fetch_url(url, total_count, i))
+                task = g.create_task(fetch_url(url, filename, total_count))
                 tasks.add(task)
         results = []
         keys = [
@@ -108,15 +108,15 @@ async def execute_fetcher_tasks(urls_select: List[str], filename, total_count: i
             res = {keys[y]: data[y] for y in range(12)}
             results.append(res)
         df = pd.DataFrame(results)
-        df['domain_date'] = pd.to_datetime(df['domain_date'])
-        df['create_date'] = pd.to_datetime(df['create_date'])                                   
+        df['create_date'] = pd.to_datetime(df['create_date'])
+        df['refresh_date'] = pd.to_datetime(df['refresh__date'])                                   
         # (print("check ", df.shape))
         # LOGGER.success(
         #  f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
     return df
 
 
-async def fetch_url(domain: str, filename, total_count: int):
+async def fetch_url(domain: str, filename: str, total_count: int):
     """
     Fetch raw HTML from a URL prior to parsing.
     :param ClientSession session: Async HTTP requests session.
@@ -134,8 +134,8 @@ async def fetch_url(domain: str, filename, total_count: int):
     spf = await get_spf(domain)
     www, wwwptr, wwwcname = await get_www(domain)
     mail, mailptr = await get_mail(domain)
-    date = get_create_date(filename)
-    updated = datetime.datetime.now()
+    create_date = get_create_date(filename)
+    refresh_date = datetime.datetime.now()
 
     # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
 
@@ -150,8 +150,8 @@ async def fetch_url(domain: str, filename, total_count: int):
         wwwcname,
         mail,
         mailptr,
-        date,
-        updated,
+        create_date,
+        refresh_date,
     ]
 
 
