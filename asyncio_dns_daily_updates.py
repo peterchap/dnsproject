@@ -79,7 +79,7 @@ LOGGER = create_logger()
 date = date.today().strftime("%Y-%m-%d")
 
 
-async def execute_fetcher_tasks(urls_select: List[str], create_date, total_count: int):
+async def execute_fetcher_tasks(urls_select: List[str], filename, total_count: int):
     # start_time = timer()
     limiter = AsyncLimiter(100, 1)
     async with asyncio.TaskGroup() as g:
@@ -100,8 +100,8 @@ async def execute_fetcher_tasks(urls_select: List[str], create_date, total_count
             "wwwcname",
             "mail",
             "mailptr",
-            "domain_date",
             "create_date",
+            "refresh_date",
         ]
         for t in tasks:
             data = await t
@@ -116,7 +116,7 @@ async def execute_fetcher_tasks(urls_select: List[str], create_date, total_count
     return df
 
 
-async def fetch_url(domain: str, create_date, total_count: int):
+async def fetch_url(domain: str, filename, total_count: int):
     """
     Fetch raw HTML from a URL prior to parsing.
     :param ClientSession session: Async HTTP requests session.
@@ -134,7 +134,7 @@ async def fetch_url(domain: str, create_date, total_count: int):
     spf = await get_spf(domain)
     www, wwwptr, wwwcname = await get_www(domain)
     mail, mailptr = await get_mail(domain)
-    date = create_date
+    date = get_create_date(filename)
     updated = datetime.datetime.now()
 
     # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
@@ -289,10 +289,9 @@ if __name__ == "__main__":
     final = pd.DataFrame()
     for file in os.listdir(directory):
         df = pd.read_parquet(directory + file, engine="pyarrow", columns=["domain"])
-        create_date = get_create_date(file)
         urls_to_fetch = df["domain"].tolist()
         len = df.shape[0]
-        df = asyncio.run(execute_fetcher_tasks(urls_to_fetch, create_date, len))
+        df = asyncio.run(execute_fetcher_tasks(urls_to_fetch, file, len))
         final = pd.concat([final, df])
         print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
