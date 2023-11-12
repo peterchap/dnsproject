@@ -109,7 +109,7 @@ async def execute_fetcher_tasks(urls_select: List[str], filename: str, total_cou
             results.append(res)
         df = pd.DataFrame(results)
         df['create_date'] = pd.to_datetime(df['create_date'])
-        df['refresh_date'] = pd.to_datetime(df['refresh__date'])                                   
+        df['refresh_date'] = pd.to_datetime(df['refresh_date'])                                   
         # (print("check ", df.shape))
         # LOGGER.success(
         #  f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
