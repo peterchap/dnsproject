@@ -6,8 +6,6 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import re
 import csv
-#import boto3
-import zipfile
 import os
 
 from time import perf_counter as timer
@@ -72,7 +70,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/root/dns_project/"
+    directory = "/root/dnsproject/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -94,8 +92,10 @@ async def execute_fetcher_tasks(urls_select: List[str], batch: int, total_count:
         results = []
         keys = [
          "domain",
+         "a",
          "cname",
          "mx",
+         "spf",
          "www",
          "wwwptr",
          "wwwcname",
@@ -105,7 +105,7 @@ async def execute_fetcher_tasks(urls_select: List[str], batch: int, total_count:
          ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(9)}
+            res = {keys[y]: data[y] for y in range(11)}
             results.append(res)
         df = pd.DataFrame(results)
         # (print("check ", df.shape))
@@ -126,15 +126,26 @@ async def fetch_url(domain: str, batch: int, total_count: int, i: int):
     
     valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
     domain = valid_pattern.sub("", domain)
+    a = await get_A(domain)
     cname = await get_cname(domain)
     mx = await get_mx(domain)
     www, wwwptr, wwwcname = await get_www(domain)
     mail, mailptr = await get_mail(domain)
+    spf = await get_spf(domain)
 
     # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
 
-    return [domain, cname, mx, www, wwwptr, wwwcname, mail, mailptr, date]
+    return [domain, a, cname, mx, spf, www, wwwptr, wwwcname, mail, mailptr, date]
 
+async def get_A(domain):
+    try:
+        result = await resolver.resolve(domain, "A")
+        a = []
+        for rr in result:
+            a.append(rr.to_text())
+    except Exception as e:
+        a = ["No A"]
+    return a
 
 async def get_cname(domain):
     try:
@@ -223,45 +234,25 @@ async def get_mail(domain):
         mailptr = ["Null"]
     return mail, mailptr
 
-
-def read_file_from_s3(bucket_name, file_name):
-    s3 = boto3.client("s3")
-    obj = s3.get_object(Bucket="domain-monitor", Key=file_name)
-    data = obj["Body"].read().decode("utf-8")
-    return data
-
-
-def write_dataframe_to_s3_parquet(df, bucket, key, s3_client=None):
-    """Write a dataframe to S3 in Parquet format.
-    :param df: DataFrame to write.
-    :param bucket: S3 bucket name.
-    :param key: S3 key for the file (path + filename).
-    :param s3_client: Pre-configured boto3 S3 client.
-    """
-    if s3_client is None:
-        s3_client = boto3.client("s3")
-
-    # Convert DataFrame to Parquet
-    parquet_buffer = BytesIO()
-    df.to_parquet(parquet_buffer, index=False, engine="pyarrow")
-
-    # Reset buffer cursor
-    parquet_buffer.seek(0)
-
-    # Upload the Parquet file to S3
-    s3_client.put_object(Bucket=bucket, Key=key, Body=parquet_buffer.getvalue())
-    LOGGER.info(f"File uploaded to S3 bucket {bucket} at {key}")
-    print(f"File uploaded to S3 bucket {bucket} at {key}")
+async def get_spf(domain):
+    try:
+        result = await resolver.resolve(domain, "TXT")
+        spf = None
+        for rr in result:
+            # print(domain, rr.text)
+            if "spf" in rr.text.lower():
+                spf = [rr.text]
+        if spf is None:
+            spf = ["No SPF"]
+    except Exception as e:
+        spf = ["Null"]
+    return spf
 
 
 if __name__ == "__main__":
     directory = "/root/dnsproject/"
     #bucket_name = "domain-monitor-results"
     file_key = "dns_input.parquet"
-    #session = boto3.session.Session()
-    #client = session.client("s3")
-    #client.download_file(bucket_name, file_key, directory + file_key)
-
     cols = ["domain", "ns", "ip", "country", "web_server", "Alexa_rank"]
 
     table = pq.read_table(directory + file_key)
@@ -274,8 +265,10 @@ if __name__ == "__main__":
     # end = 0
     keys = [
         "domain",
+        "a",
         "cname",
         "mx",
+        "spf",
         "www",
         "wwwptr",
         "wwwcname",
@@ -287,8 +280,10 @@ if __name__ == "__main__":
     schema = pa.schema(
         [
             pa.field("domain", pa.string()),
+            pa.field("a", pa.list_(t2)),
             pa.field("cname", pa.list_(t2)),
             pa.field("mx", pa.list_(t2)),
+            pa.field("spf", pa.list_(t2)),
             pa.field("www", pa.list_(t2)),
             pa.field("wwwptr", pa.list_(t2)),
             pa.field("wwwcname", pa.list_(t2)),
@@ -308,26 +303,10 @@ if __name__ == "__main__":
                         urls_to_fetch[start : i + step], batchcount, len
                     )
                 )
+                print(df.columns, df.dtypes)
                 batch = pa.RecordBatch.from_pandas(df)
                 writer.write_batch(batch)
                 start = i + step
                 batchcount = batchcount + step
                 LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
-
-    # read in arrow file and convert to parquet and export to s3
-'''
-    s3_bucket = "domain-monitor-results"
-    host = os.uname()[1]
-    hostname = host.split(".")[0]
-    timestamp = time.time()
-    s3_filename = f"dns_result_{hostname}_{timestamp:0.0f}.parquet"
-    s3_key = s3_filename
-    with pa.ipc.open_stream(directory + "domains_all.arrow") as reader:
-        print(reader.schema)
-        # for batch in reader:
-
-    #    df = reader.read_pandas()
-    #print(df.shape)
-    #write_dataframe_to_s3_parquet(df, s3_bucket, s3_key)
-'''
