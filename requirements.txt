@@ -1,0 +1,12 @@
+asyncio
+boto3
+datetime
+dnspython
+httpx
+loguru
+pandas
+pyarrow
+typing
+aiolimiter
+s3fs
+tldextract
