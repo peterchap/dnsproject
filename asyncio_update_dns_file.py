@@ -144,7 +144,7 @@ async def get_A(domain):
         for rr in result:
             a.append(rr.to_text())
     except Exception as e:
-        a = ["No A"]
+        a = "No A"
     return a
 
 async def get_cname(domain):
@@ -154,9 +154,9 @@ async def get_cname(domain):
         for cn in answers:
             cname.append(cn.to_text().rstrip("."))
     except dns.resolver.NoAnswer as e:
-        cname = ["No CNAME"]
+        cname = "No CNAME"
     except Exception as e:
-        cname = ["Null"]
+        cname = "Null"
     return cname
 
 
