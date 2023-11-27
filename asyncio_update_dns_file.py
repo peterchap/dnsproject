@@ -295,8 +295,6 @@ if __name__ == "__main__":
     directory = "/root/dnsproject/"
     #bucket_name = "domain-monitor-results"
     file_key = "dns_input.parquet"
-    cols = ["domain", "ns", "ip", "country", "web_server", "Alexa_rank"]
-
     table = pq.read_table(directory + file_key)
     allurls = table["domain"].to_pylist()
     urls_to_fetch = [value.rstrip(".") if isinstance(value, str) else value for value in allurls]
@@ -305,32 +303,20 @@ if __name__ == "__main__":
     start_time = time.time()
     start = 0
     # end = 0
-    keys = [
-        "domain",
-        "a",
-        "cname",
-        "mx",
-        "spf",
-        "www",
-        "wwwptr",
-        "wwwcname",
-        "mail",
-        "mailptr",
-        "date",
-    ]
     schema = pa.schema(
         [
             pa.field("domain", pa.string()),
             pa.field("a", pa.string()),
             pa.field("cname", pa.string()),
             pa.field("mx", pa.string()),
+            pa.field("mx_domain", pa.string()),
             pa.field("spf", pa.string()),
             pa.field("www", pa.string()),
             pa.field("wwwptr", pa.string()),
             pa.field("wwwcname", pa.string()),
             pa.field("mail", pa.string()),
             pa.field("mailptr", pa.string()),
-            pa.field("date", pa.string()),
+            pa.field("refresh_date", pa.string()),
         ]
     )
     with pa.OSFile(directory + "domains_all.arrow", "wb") as sink:
