@@ -316,7 +316,7 @@ if __name__ == "__main__":
             pa.field("wwwcname", pa.string()),
             pa.field("mail", pa.string()),
             pa.field("mailptr", pa.string()),
-            pa.field("refresh_date", pa.string()),
+            pa.field("refresh_date", pa.timestamp('ns')),
         ]
     )
     with pa.OSFile(directory + "domains_all.arrow", "wb") as sink:
