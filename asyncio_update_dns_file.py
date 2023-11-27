@@ -80,7 +80,7 @@ LOGGER = create_logger()
 date = date.today().strftime("%Y-%m-%d")
 
 
-async def execute_fetcher_tasks(urls_select: List[str],batchcount: int  total_count: int):
+async def execute_fetcher_tasks(urls_select: List[str],batchcount: int,  total_count: int):
     # start_time = timer()
     limiter = AsyncLimiter(100, 1)
     async with asyncio.TaskGroup() as g:
