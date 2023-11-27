@@ -80,7 +80,7 @@ LOGGER = create_logger()
 date = date.today().strftime("%Y-%m-%d")
 
 
-async def execute_fetcher_tasks(urls_select: List[str], filename: str, total_count: int):
+async def execute_fetcher_tasks(urls_select: List[str],  total_count: int):
     # start_time = timer()
     limiter = AsyncLimiter(100, 1)
     async with asyncio.TaskGroup() as g:
@@ -102,12 +102,11 @@ async def execute_fetcher_tasks(urls_select: List[str], filename: str, total_cou
             "wwwcname",
             "mail",
             "mailptr",
-            "create_date",
             "refresh_date",
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(13)}
+            res = {keys[y]: data[y] for y in range(12)}
             results.append(res)
         df = pd.DataFrame(results)
         df['create_date'] = pd.to_datetime(df['create_date'])
@@ -118,7 +117,7 @@ async def execute_fetcher_tasks(urls_select: List[str], filename: str, total_cou
     return df
 
 
-async def fetch_url(domain: str, filename: str, total_count: int):
+async def fetch_url(domain: str,  total_count: int):
     """
     Fetch raw HTML from a URL prior to parsing.
     :param ClientSession session: Async HTTP requests session.
@@ -136,7 +135,6 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     spf = await get_spf(domain)
     www, wwwptr, wwwcname = await get_www(domain)
     mail, mailptr = await get_mail(domain)
-    create_date = get_create_date(filename)
     refresh_date = datetime.datetime.now()
 
     # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
@@ -153,7 +151,6 @@ async def fetch_url(domain: str, filename: str, total_count: int):
         wwwcname,
         mail,
         mailptr,
-        create_date,
         refresh_date,
     ]
 
@@ -293,16 +290,6 @@ async def get_spf(domain):
     except Exception as e:
         spf = "Null"
     return spf
-
-
-def get_create_date(filename):
-    date_format = "%Y-%m-%d"
-    x = filename.split(".")[0]
-    b = x[19:29]
-    date = datetime.datetime.strptime(b, date_format)
-    return date
-
-
 
 if __name__ == "__main__":
     directory = "/root/dnsproject/"
