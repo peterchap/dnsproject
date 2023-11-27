@@ -87,7 +87,7 @@ async def execute_fetcher_tasks(urls_select: List[str],batchcount: int,  total_c
         tasks = set()
         for i, url in enumerate(urls_select):
             async with limiter:
-                task = g.create_task(fetch_url(url, filename, total_count))
+                task = g.create_task(fetch_url(url,  total_count))
                 tasks.add(task)
         results = []
         keys = [
