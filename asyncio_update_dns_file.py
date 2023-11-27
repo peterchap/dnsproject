@@ -318,19 +318,18 @@ if __name__ == "__main__":
         "mailptr",
         "date",
     ]
-    t2 = pa.string()
     schema = pa.schema(
         [
             pa.field("domain", pa.string()),
-            pa.field("a", pa.list_(t2)),
-            pa.field("cname", pa.list_(t2)),
-            pa.field("mx", pa.list_(t2)),
-            pa.field("spf", pa.list_(t2)),
-            pa.field("www", pa.list_(t2)),
-            pa.field("wwwptr", pa.list_(t2)),
-            pa.field("wwwcname", pa.list_(t2)),
-            pa.field("mail", pa.list_(t2)),
-            pa.field("mailptr", pa.list_(t2)),
+            pa.field("a", pa.string()),
+            pa.field("cname", pa.string()),
+            pa.field("mx", pa.string()),
+            pa.field("spf", pa.string()),
+            pa.field("www", pa.string()),
+            pa.field("wwwptr", pa.string()),
+            pa.field("wwwcname", pa.string()),
+            pa.field("mail", pa.string()),
+            pa.field("mailptr", pa.string()),
             pa.field("date", pa.string()),
         ]
     )
