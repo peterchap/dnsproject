@@ -80,7 +80,7 @@ LOGGER = create_logger()
 date = date.today().strftime("%Y-%m-%d")
 
 
-async def execute_fetcher_tasks(urls_select: List[str],  total_count: int):
+async def execute_fetcher_tasks(urls_select: List[str],batchcount: int  total_count: int):
     # start_time = timer()
     limiter = AsyncLimiter(100, 1)
     async with asyncio.TaskGroup() as g:
@@ -112,8 +112,8 @@ async def execute_fetcher_tasks(urls_select: List[str],  total_count: int):
         df['create_date'] = pd.to_datetime(df['create_date'])
         df['refresh_date'] = pd.to_datetime(df['refresh_date'])                                   
         # (print("check ", df.shape))
-        # LOGGER.success(
-        #  f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
+        LOGGER.success(
+          f"Executed Batch of {batchcount} in {time.perf_counter() - start_time:0.2f} seconds.")
     return df
 
 
