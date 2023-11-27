@@ -303,7 +303,7 @@ def get_create_date(filename):
 
 
 if __name__ == "__main__":
-    directory = "/root/updates/"
+    directory = "/root/dnsproject/"
     output = "/root/dnsproject/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
     extract.update()
