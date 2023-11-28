@@ -324,16 +324,14 @@ if __name__ == "__main__":
         with pa.ipc.new_stream(sink, schema) as writer:
             start = 0
             batchcount = 0
-            step = 10
-            for i in range(0, 100, step):
+            step = 50000
+            for i in range(0, len, step):
                 df = asyncio.run(
                     execute_fetcher_tasks(
                         urls_to_fetch[start : i + step], batchcount, len
                     )
                 )
-                df.to_csv(directory + "dftest.csv", index=False)
                 batch = pa.RecordBatch.from_pandas(df, schema=schema)
-                print(batch)
                 writer.write_batch(batch)
                 start = i + step
                 batchcount = batchcount + step
