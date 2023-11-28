@@ -333,7 +333,7 @@ if __name__ == "__main__":
                 )
                 df.to_csv(directory + "dftest.csv", index=False)
                 print(batch)
-                batch = pa.RecordBatch.from_pandas(df)
+                batch = pa.RecordBatch.from_pandas(df, schema=schema)
                 writer.write_batch(batch)
                 start = i + step
                 batchcount = batchcount + step
