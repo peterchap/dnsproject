@@ -285,6 +285,7 @@ async def get_spf(domain):
             # print(domain, rr.text)
             if "spf" in rr.text.lower():
                 spf = rr.to_text().strip('"')
+        spf = listToString(spf).rstrip(",")
         if spf is None:
             spf = "No SPF"
     except Exception as e:
@@ -323,8 +324,8 @@ if __name__ == "__main__":
         with pa.ipc.new_stream(sink, schema) as writer:
             start = 0
             batchcount = 0
-            step = 50000
-            for i in range(0, len, step):
+            step = 10
+            for i in range(0, 100, step):
                 df = asyncio.run(
                     execute_fetcher_tasks(
                         urls_to_fetch[start : i + step], batchcount, len
