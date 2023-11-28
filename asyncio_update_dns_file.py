@@ -332,8 +332,8 @@ if __name__ == "__main__":
                     )
                 )
                 df.to_csv(directory + "dftest.csv", index=False)
-                print(batch)
                 batch = pa.RecordBatch.from_pandas(df, schema=schema)
+                print(batch)
                 writer.write_batch(batch)
                 start = i + step
                 batchcount = batchcount + step
