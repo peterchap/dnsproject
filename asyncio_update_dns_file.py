@@ -331,7 +331,7 @@ if __name__ == "__main__":
                         urls_to_fetch[start : i + step], batchcount, len
                     )
                 )
-                print(df.columns, df.dtypes)
+                print(df)
                 batch = pa.RecordBatch.from_pandas(df)
                 writer.write_batch(batch)
                 start = i + step
