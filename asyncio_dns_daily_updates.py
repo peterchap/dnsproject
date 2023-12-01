@@ -6,6 +6,7 @@ import re
 import tldextract
 import os
 import datetime
+import pyarrow as pa
 
 from time import perf_counter as timer
 from typing import List
@@ -328,7 +329,7 @@ if __name__ == "__main__":
         final = pd.concat([final, df])
         print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(output + "domains_updates.parquet", engine="fastparquet")
+    final.to_parquet(directory + "domains_updates.parquet", engine="fastparquet")
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
