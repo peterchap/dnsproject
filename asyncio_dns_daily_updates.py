@@ -79,7 +79,9 @@ LOGGER = create_logger()
 date = date.today().strftime("%Y-%m-%d")
 
 
-async def execute_fetcher_tasks(urls_select: List[str], filename: str, total_count: int):
+async def execute_fetcher_tasks(
+    urls_select: List[str], filename: str, total_count: int
+):
     # start_time = timer()
     limiter = AsyncLimiter(100, 1)
     async with asyncio.TaskGroup() as g:
@@ -109,8 +111,8 @@ async def execute_fetcher_tasks(urls_select: List[str], filename: str, total_cou
             res = {keys[y]: data[y] for y in range(13)}
             results.append(res)
         df = pd.DataFrame(results)
-        df['create_date'] = pd.to_datetime(df['create_date'])
-        df['refresh_date'] = pd.to_datetime(df['refresh_date'])                                   
+        df["create_date"] = pd.to_datetime(df["create_date"])
+        df["refresh_date"] = pd.to_datetime(df["refresh_date"])
         # (print("check ", df.shape))
         # LOGGER.success(
         #  f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
@@ -165,9 +167,11 @@ def listToString(list):
         str1 += ele1 + join
     return str1
 
+
 def extract_registered_domain(mx_record):
     result = extract(mx_record).registered_domain
     return f"{result}"
+
 
 async def get_A(domain):
     try:
@@ -211,6 +215,7 @@ async def get_mx(domain):
         mx = "Null"
         mx_domain = None
     return mx, mx_domain
+
 
 async def get_www(domain):
     try:
@@ -303,12 +308,13 @@ def get_create_date(filename):
 
 
 if __name__ == "__main__":
-    directory = "/root/dnsproject/"
-    output = "/root/dnsproject/"
+    # directory = "/root/dnsproject/"
+    # output = "/root/home/peter/Documents/updates/"
+    directory = "E:/domains-monitor/updates/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
     extract.update()
-    #directory = "/home/peter/Documents/updates/"
-    #output = "/home/peter/Documents/dnsproject/"
+    # directory = "/home/peter/Documents/updates/"
+    # output = "/home/peter/Documents/dnsproject/"
     start_time = time.time()
 
     # download_path = "/home/peter/Downloads/"
@@ -322,7 +328,7 @@ if __name__ == "__main__":
         final = pd.concat([final, df])
         print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(output + "domains_updates.parquet", engine= 'fastparquet')
+    final.to_parquet(output + "domains_updates.parquet", engine="fastparquet")
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
