@@ -7,10 +7,11 @@ import tldextract
 import os
 import datetime
 import pyarrow as pa
-
+import socket
 from time import perf_counter as timer
 from typing import List
 from loguru import logger as custom_logger
+
 from datetime import date
 from aiolimiter import AsyncLimiter
 
@@ -94,22 +95,30 @@ async def execute_fetcher_tasks(
         results = []
         keys = [
             "domain",
+            "suffix",
             "a",
             "cname",
             "mx",
             "mx_domain",
+            "mx_suffix",
             "spf",
+            "dmarc",
             "www",
             "wwwptr",
             "wwwcname",
-            "mail",
-            "mailptr",
+            "mail_a",
+            "mail_mx",
+            "mail_mx_domain",
+            "mail_mx_suffix",
+            "mail_spf",
+            "mail_dmarc",
+            "mail_ptr",
             "create_date",
             "refresh_date",
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(13)}
+            res = {keys[y]: data[y] for y in range(21)}
             results.append(res)
         df = pd.DataFrame(results)
         df["create_date"] = pd.to_datetime(df["create_date"])
@@ -132,36 +141,55 @@ async def fetch_url(domain: str, filename: str, total_count: int):
 
     valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
     domain = valid_pattern.sub("", domain)
+    suffix = extract_suffix(domain)
     a = await get_A(domain)
+    ns = await get_ns(domain)
     cname = await get_cname(domain)
-    mx, mx_domain = await get_mx(domain)
+    mx, mx_domain, mx_suffix = await get_mx(domain)
     spf = await get_spf(domain)
-    www, wwwptr, wwwcname = await get_www(domain)
-    mail, mailptr = await get_mail(domain)
-    create_date = get_create_date(filename)
+    dmarc = await get_dmarc(domain)
+    www, www_ptr, www_cname = await get_www(domain)
+    (
+        mail_a,
+        mail_mx,
+        mail_mx_domain,
+        mail_suffix,
+        mail_spf,
+        mail_dmarc,
+        mail_ptr,
+    ) = await get_mail(domain)
+    create_date = await get_create_date(filename)
     refresh_date = datetime.datetime.now()
 
     # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
 
     return [
         domain,
+        suffix,
         a,
         cname,
         mx,
         mx_domain,
+        mx_suffix,
         spf,
+        dmarc,
         www,
-        wwwptr,
-        wwwcname,
-        mail,
-        mailptr,
+        www_ptr,
+        www_cname,
+        mail_a,
+        mail_mx,
+        mail_mx_domain,
+        mail_suffix,
+        mail_spf,
+        mail_dmarc,
+        mail_ptr,
         create_date,
         refresh_date,
     ]
 
 
-def listToString(list):
-    join = ","
+def mxToString(list):
+    join = ", "
     str1 = ""
     for ele in list:
         ele1 = ele.replace(",", ":").rstrip(".")
@@ -169,9 +197,24 @@ def listToString(list):
     return str1
 
 
+def listToString(list):
+    join = ", "
+    str1 = ""
+    for ele in list:
+        str1 += ele + join
+    str1 = str1.rstrip(", ")
+    return str1
+
+
 def extract_registered_domain(mx_record):
-    result = extract(mx_record).registered_domain
-    return f"{result}"
+    reg = extract(mx_record).registered_domain
+    suffix = extract(mx_record).suffix
+    return reg, suffix
+
+
+def extract_suffix(domain):
+    result = extract(domain).suffix
+    return result
 
 
 async def get_A(domain):
@@ -182,8 +225,20 @@ async def get_A(domain):
             a.append(rr.to_text())
         a = listToString(a).rstrip(",")
     except Exception as e:
-        a = "No A"
+        a = "None"
     return a
+
+
+async def get_ns(domain):
+    try:
+        result = await resolver.resolve(domain, "NS")
+        ns = []
+        for rr in result:
+            ns.append(rr.to_text().rstrip("."))
+        ns = listToString(ns).rstrip(",")
+    except Exception as e:
+        ns = e
+    return ns
 
 
 async def get_cname(domain):
@@ -194,9 +249,9 @@ async def get_cname(domain):
             cname.append(cn.to_text().rstrip("."))
         cname = listToString(cname).rstrip(",")
     except dns.resolver.NoAnswer as e:
-        cname = "No CNAME"
+        cname = "None"
     except Exception as e:
-        cname = "Null"
+        cname = "None"
     return cname
 
 
@@ -206,83 +261,49 @@ async def get_mx(domain):
         mx = []
         for rr in result:
             mx.append(f"{rr.preference}, {rr.exchange}")
-        mx = listToString(mx).rstrip(",")
+        mx = mxToString(mx).rstrip(", ")
         split = mx.split(":")[1].strip().split(",")[0]
-        mx_domain = extract_registered_domain(split)
-    except dns.resolver.NoAnswer as e:
-        mx = "No MX"
-        mx_domain = None
+        mx_domain, suffix = extract_registered_domain(split)
     except Exception as e:
-        mx = "Null"
+        mx = "None"
         mx_domain = None
-    return mx, mx_domain
+        suffix = None
+    return mx, mx_domain, suffix
+
+
+async def get_ptr(ip):
+    try:
+        ptr = socket.getfqdn(ip)
+        if ptr == ip:
+            ptr = "None"
+    except Exception as e:
+        ptr = e
+    return ptr
 
 
 async def get_www(domain):
-    try:
-        result = await resolver.resolve("www." + domain)
-        www = []
-        for rr in result:
-            www.append(rr.to_text())
-        www = listToString(www).rstrip(",")
-        try:
-            wwwptr = []
-            for ip in www:
-                res = await resolver.resolve_address(ip)
-                for rr in res:
-                    wwwptr.append(rr.to_text().rstrip("."))
-                wwwptr = listToString(wwwptr).rstrip(",")
-        except dns.resolver.NoAnswer as e:
-            wwwptr = "No Answer"
-        except Exception as e:
-            wwwptr = "Null"
-        try:
-            result = await resolver.resolve("www." + domain, "CNAME")
-            wwwcname = []
-            for wwwcn in result:
-                wwwcname.append(wwwcn.to_text().rstrip("."))
-            wwwcname = listToString(wwwcname).rstrip(",")
-        except dns.resolver.NoAnswer as e:
-            wwwcname = "No Answer"
-        except Exception as e:
-            wwwcname = "Null"
-    except dns.resolver.NoAnswer as e:
-        www = "No Answer"
-        wwwptr = "No Answer"
-        wwwcname = "No Answer"
-    except Exception as e:
-        www = "Null"
-        wwwptr = "Null"
-        wwwcname = "Null"
+    www = await get_A("www." + domain)
+    if www == "No A":
+        www_ptr = "None"
+    else:
+        www_ptr = await get_ptr(www.split(", ")[0])
+    www_cname = await get_cname("www." + domain)
 
-    return www, wwwcname, wwwptr
+    return www, www_ptr, www_cname
 
 
 async def get_mail(domain):
-    try:
-        result = await resolver.resolve("mail." + domain, "A")
-        mail = []
-        for rr in result:
-            mail.append(rr.to_text())
-        mail = listToString(mail).rstrip(",")
-        try:
-            mailptr = []
-            res = await resolver.resolve_address(mail[0])
-            for rr in res:
-                mailptr.append(rr.to_text())
-            mailptr = listToString(mailptr).rstrip(",")
-        except dns.resolver.NoAnswer as e:
-            mailptr = "No Answer"
-        except Exception as e:
-            mailptr = "Null"
+    mail_a = await get_A("mail." + domain)
+    mail_mx, mail_mx_domain, mail_suffix = await get_mx("mail." + domain)
+    if mail_a != "No A":
+        mail_ptr = await get_ptr(mail_a.split(", ")[0])
+    else:
+        mail_ptr = "None"
 
-    except dns.resolver.NoAnswer as e:
-        mail = "No Answer"
-        mailptr = "No Answer"
-    except Exception as e:
-        mail = "Null"
-        mailptr = "Null"
-    return mail, mailptr
+    mail_spf = await get_spf("mail." + domain)
+    mail_dmarc = await get_dmarc("mail." + domain)
+
+    return mail_a, mail_mx, mail_mx_domain, mail_suffix, mail_spf, mail_dmarc, mail_ptr
 
 
 async def get_spf(domain):
@@ -290,25 +311,39 @@ async def get_spf(domain):
         result = await resolver.resolve(domain, "TXT")
         spf = None
         for rr in result:
-            # print(domain, rr.text)
-            if "spf" in rr.text.lower():
+            if "spf" in rr.to_text().lower():
                 spf = rr.to_text().strip('"')
         if spf is None:
-            spf = "No SPF"
+            spf = "None"
     except Exception as e:
-        spf = "Null"
+        spf = "None"
     return spf
 
 
-def get_create_date(filename):
+async def get_dmarc(domain):
+    try:
+        result = await resolver.resolve("_dmarc." + domain, "TXT")
+        dmarc = None
+        for rr in result:
+            if "dmarc" in rr.to_text().lower():
+                dmarc = rr.to_text().strip('"')
+        if dmarc is None:
+            dmarc = "None"
+    except Exception as e:
+        dmarc = "None"
+    return dmarc
+
+
+async def get_create_date(filename):
     date_format = "%Y-%m-%d"
     x = filename.split(".")[0]
-    b = x[19:29]
-    date = datetime.datetime.strptime(b, date_format)
+    b = x[20:30]
+    date = str(datetime.datetime.strptime(b, date_format))
     return date
 
 
 if __name__ == "__main__":
+    print("Starting...")
     # directory = "/root/dnsproject/"
     # output = "/root/home/peter/Documents/updates/"
     directory = "E:/domains-monitor/updates/"
@@ -322,14 +357,16 @@ if __name__ == "__main__":
     # extract_dir = "/home/peter/Downloads/"
     final = pd.DataFrame()
     for file in os.listdir(directory):
+        print(file)
         df = pd.read_parquet(directory + file, engine="pyarrow", columns=["domain"])
+        df = df.head(50)
         urls_to_fetch = df["domain"].tolist()
         len = df.shape[0]
         df = asyncio.run(execute_fetcher_tasks(urls_to_fetch, file, len))
         final = pd.concat([final, df])
         print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(directory + "domains_updates.parquet", engine="fastparquet")
+    final.to_parquet(directory + "domains_test.parquet")
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
