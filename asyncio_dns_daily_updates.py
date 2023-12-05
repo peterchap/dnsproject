@@ -71,7 +71,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/home/peter/Documents/dnsproject/"
+    directory = "/root/dnsproject/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -277,13 +277,13 @@ async def get_ptr(ip):
         if ptr == ip:
             ptr = "None"
     except Exception as e:
-        ptr = e
+        ptr = "None"
     return ptr
 
 
 async def get_www(domain):
     www = await get_A("www." + domain)
-    if www == "No A":
+    if www == "None":
         www_ptr = "None"
     else:
         www_ptr = await get_ptr(www.split(", ")[0])
@@ -295,7 +295,7 @@ async def get_www(domain):
 async def get_mail(domain):
     mail_a = await get_A("mail." + domain)
     mail_mx, mail_mx_domain, mail_suffix = await get_mx("mail." + domain)
-    if mail_a != "No A":
+    if mail_a != "None":
         mail_ptr = await get_ptr(mail_a.split(", ")[0])
     else:
         mail_ptr = "None"
@@ -337,24 +337,24 @@ async def get_dmarc(domain):
 async def get_create_date(filename):
     date_format = "%Y-%m-%d"
     x = filename.split(".")[0]
-    b = x[20:30]
+    b = x[16:26]
     date = str(datetime.datetime.strptime(b, date_format))
     return date
 
 
 if __name__ == "__main__":
     print("Starting...")
-    # directory = "/root/dnsproject/"
-    # output = "/root/home/peter/Documents/updates/"
+    directory = "/root/updates/"
+    output = "/root/dnsresults/"
     #directory = "E:/domains-monitor/updates/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
     extract.update()
-    directory = "/home/peter/Documents/updates/"
-    output = "/home/peter/Documents/dnsproject/"
+    #directory = "/home/peter/Documents/updates/"
+    #output = "/home/peter/Documents/dnsproject/"
     start_time = time.time()
 
-    # download_path = "/home/peter/Downloads/"
-    # extract_dir = "/home/peter/Downloads/"
+    #download_path = "/home/peter/Downloads/"
+    #extract_dir = "/home/peter/Downloads/"
     final = pd.DataFrame()
     for file in os.listdir(directory):
         print(file)
@@ -366,7 +366,7 @@ if __name__ == "__main__":
         final = pd.concat([final, df])
         print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(directory + "domains_test.parquet")
+    final.to_parquet(output + "domains_updates.parquet")
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 

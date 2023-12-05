@@ -71,13 +71,14 @@ def create_logger():
     :returns: custom_logger
     """
     directory = "/root/dnsproject/"
+    #directory = "/home/peter/Documents/updates/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
 
 
 LOGGER = create_logger()
-date = date.today().strftime("%Y-%m-%d")
+date = datetime.datetime.now().strftime("%Y-%m-%d")
 
 
 async def execute_fetcher_tasks(
@@ -103,8 +104,8 @@ async def execute_fetcher_tasks(
             "spf",
             "dmarc",
             "www",
-            "wwwptr",
-            "wwwcname",
+            "www_ptr",
+            "www_cname",
             "mail_a",
             "mail_mx",
             "mail_mx_domain",
@@ -151,7 +152,7 @@ async def fetch_url(domain: str, total_count: int):
         mail_a,
         mail_mx,
         mail_mx_domain,
-        mail_suffix,
+        mail_mx_suffix,
         mail_spf,
         mail_dmarc,
         mail_ptr,
@@ -176,7 +177,7 @@ async def fetch_url(domain: str, total_count: int):
         mail_a,
         mail_mx,
         mail_mx_domain,
-        mail_suffix,
+        mail_mx_suffix,
         mail_spf,
         mail_dmarc,
         mail_ptr,
@@ -273,13 +274,13 @@ async def get_ptr(ip):
         if ptr == ip:
             ptr = "None"
     except Exception as e:
-        ptr = e
+        ptr = "None"
     return ptr
 
 
 async def get_www(domain):
     www = await get_A("www." + domain)
-    if www == "No A":
+    if www == "None":
         www_ptr = "None"
     else:
         www_ptr = await get_ptr(www.split(", ")[0])
@@ -340,10 +341,12 @@ async def get_create_date(filename):
 
 if __name__ == "__main__":
     directory = "/root/dnsproject/"
+    extract = tldextract.TLDExtract(include_psl_private_domains=True)
+    extract.update()
     # bucket_name = "domain-monitor-results"
     file_key = "dns_input.parquet"
     table = pq.read_table(directory + file_key)
-    allurls = table["domain"].to_pylist()
+    allurls = table["domain"].to_pylist()[0:1000]
     urls_to_fetch = [
         value.rstrip(".") if isinstance(value, str) else value for value in allurls
     ]
@@ -355,16 +358,24 @@ if __name__ == "__main__":
     schema = pa.schema(
         [
             pa.field("domain", pa.string()),
+            pa.field("suffix", pa.string()),
             pa.field("a", pa.string()),
             pa.field("cname", pa.string()),
             pa.field("mx", pa.string()),
             pa.field("mx_domain", pa.string()),
+            pa.field("mx_suffix", pa.string()),
             pa.field("spf", pa.string()),
+            pa.field("dmarc", pa.string()),
             pa.field("www", pa.string()),
-            pa.field("wwwptr", pa.string()),
-            pa.field("wwwcname", pa.string()),
-            pa.field("mail", pa.string()),
-            pa.field("mailptr", pa.string()),
+            pa.field("www_ptr", pa.string()),
+            pa.field("www_cname", pa.string()),
+            pa.field("mail_a", pa.string()),
+            pa.field("mail_mx", pa.string()),
+            pa.field("mail_mx_domain", pa.string()),
+            pa.field("mail_mx_suffix", pa.string()),
+            pa.field("mail_spf", pa.string()),
+            pa.field("mail_dmarc", pa.string()),
+            pa.field("mail_ptr", pa.string()),
             pa.field("refresh_date", pa.timestamp("ns")),
         ]
     )

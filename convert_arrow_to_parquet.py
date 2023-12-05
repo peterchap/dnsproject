@@ -2,6 +2,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 directory = '/root/dnsproject/'
+#directory = '/home/peter/Documents/updates/'
 file = 'domains_all.arrow'
 output = 'domains_all.parquet'
 # Read arrow file from disk
