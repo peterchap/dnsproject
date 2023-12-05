@@ -71,7 +71,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/root/dnsproject/"
+    directory = "/home/peter/Documents/dnsproject/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -346,11 +346,11 @@ if __name__ == "__main__":
     print("Starting...")
     # directory = "/root/dnsproject/"
     # output = "/root/home/peter/Documents/updates/"
-    directory = "E:/domains-monitor/updates/"
+    #directory = "E:/domains-monitor/updates/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
     extract.update()
-    # directory = "/home/peter/Documents/updates/"
-    # output = "/home/peter/Documents/dnsproject/"
+    directory = "/home/peter/Documents/updates/"
+    output = "/home/peter/Documents/dnsproject/"
     start_time = time.time()
 
     # download_path = "/home/peter/Downloads/"
