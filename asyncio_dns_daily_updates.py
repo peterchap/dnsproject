@@ -85,7 +85,7 @@ async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
 ):
     # start_time = timer()
-    limiter = AsyncLimiter(100, 1)
+    limiter = AsyncLimiter(150, 1)
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
@@ -143,11 +143,14 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     domain = valid_pattern.sub("", domain)
     suffix = extract_suffix(domain)
     a = await get_A(domain)
-    ns = await get_ns(domain)
     cname = await get_cname(domain)
     mx, mx_domain, mx_suffix = await get_mx(domain)
-    spf = await get_spf(domain)
-    dmarc = await get_dmarc(domain)
+    if mx = "None":
+       spf = "none
+       dmarc = "None"
+    else:
+       spf = await get_spf(domain)
+       dmarc = await get_dmarc(domain)
     www, www_ptr, www_cname = await get_www(domain)
     (
         mail_a,
@@ -273,7 +276,7 @@ async def get_mx(domain):
 
 async def get_ptr(ip):
     try:
-        ptr = socket.getfqdn(ip)
+        ptr = resolver.resolve_address(ip)
         if ptr == ip:
             ptr = "None"
     except Exception as e:
@@ -299,9 +302,12 @@ async def get_mail(domain):
         mail_ptr = await get_ptr(mail_a.split(", ")[0])
     else:
         mail_ptr = "None"
-
-    mail_spf = await get_spf("mail." + domain)
-    mail_dmarc = await get_dmarc("mail." + domain)
+    if mail_mx = "None":
+        mail_spf = "None"
+        mail_dmarc = "None"
+    else:
+        mail_spf = await get_spf("mail." + domain)
+        mail_dmarc = await get_dmarc("mail." + domain)
 
     return mail_a, mail_mx, mail_mx_domain, mail_suffix, mail_spf, mail_dmarc, mail_ptr
 
