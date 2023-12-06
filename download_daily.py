@@ -8,7 +8,7 @@ zone = "detailed-update"
 format = "text"
 cols = ["domain", "ns", "ip", "country", "web_server", "email", "Alexa_rank", "phone"]
 api = f"https://domains-monitor.com/api/v1/{token}/get/{zone}/list/{format}/"
-directory = "E:/domains-monitor/updates/"
+directory = "/root/updates/"
 current_datetime = str(datetime.now().strftime("%Y-%m-%d"))
 file = "domain_update_daily" + current_datetime + ".parquet"
 # print(api)

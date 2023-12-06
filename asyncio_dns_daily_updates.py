@@ -337,7 +337,7 @@ async def get_dmarc(domain):
 async def get_create_date(filename):
     date_format = "%Y-%m-%d"
     x = filename.split(".")[0]
-    b = x[16:26]
+    b = x[19:29]
     date = str(datetime.datetime.strptime(b, date_format))
     return date
 
@@ -359,7 +359,6 @@ if __name__ == "__main__":
     for file in os.listdir(directory):
         print(file)
         df = pd.read_parquet(directory + file, engine="pyarrow", columns=["domain"])
-        df = df.head(50)
         urls_to_fetch = df["domain"].tolist()
         len = df.shape[0]
         df = asyncio.run(execute_fetcher_tasks(urls_to_fetch, file, len))
