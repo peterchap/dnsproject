@@ -81,7 +81,7 @@ LOGGER = create_logger()
 date = datetime.datetime.now().strftime("%Y-%m-%d")
 
 
-sync def execute_fetcher_tasks(
+async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
 ):
     # start_time = timer()
@@ -105,7 +105,7 @@ sync def execute_fetcher_tasks(
             "spf",
             "dmarc",
             "www",
-            "wwwptr",
+            "www_ptr",
             "wwwcname",
             "mail_a",
             "mail_mx",
@@ -114,15 +114,13 @@ sync def execute_fetcher_tasks(
             "mail_spf",
             "mail_dmarc",
             "mail_ptr",
-            "create_date",
             "refresh_date",
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(22)}
+            res = {keys[y]: data[y] for y in range(21)}
             results.append(res)
         df = pd.DataFrame(results)
-        df["create_date"] = pd.to_datetime(df["create_date"])
         df["refresh_date"] = pd.to_datetime(df["refresh_date"])
         # (print("check ", df.shape))
         # LOGGER.success(
@@ -354,7 +352,7 @@ if __name__ == "__main__":
     # bucket_name = "domain-monitor-results"
     file_key = "dns_input.parquet"
     table = pq.read_table(directory + file_key)
-    allurls = table["domain"].to_pylist()[0:1000]
+    allurls = table["domain"].to_pylist()
     urls_to_fetch = [
         value.rstrip(".") if isinstance(value, str) else value for value in allurls
     ]
