@@ -382,3 +382,4 @@ if __name__ == "__main__":
     final.to_parquet(output + "domains_updates.parquet")
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
+
