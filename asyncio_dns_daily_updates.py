@@ -85,7 +85,7 @@ async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
 ):
     # start_time = timer()
-    limiter = AsyncLimiter(100, 1)
+    limiter = AsyncLimiter(120, 1)
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
@@ -97,6 +97,7 @@ async def execute_fetcher_tasks(
             "domain",
             "suffix",
             "a",
+            "ptr",
             "cname",
             "mx",
             "mx_domain",
@@ -118,7 +119,7 @@ async def execute_fetcher_tasks(
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(21)}
+            res = {keys[y]: data[y] for y in range(22)}
             results.append(res)
         df = pd.DataFrame(results)
         df["create_date"] = pd.to_datetime(df["create_date"])
@@ -143,11 +144,18 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     domain = valid_pattern.sub("", domain)
     suffix = extract_suffix(domain)
     a = await get_A(domain)
-    ns = await get_ns(domain)
+    if a  == "None":
+       ptr  = "None"
+    else:
+       ptr = await get_ptr(a.split(", ")[0])
     cname = await get_cname(domain)
     mx, mx_domain, mx_suffix = await get_mx(domain)
-    spf = await get_spf(domain)
-    dmarc = await get_dmarc(domain)
+    if mx == "None":
+       spf = "None"
+       dmarc = "None"
+    else:
+       spf = await get_spf(domain)
+       dmarc = await get_dmarc(domain)
     www, www_ptr, www_cname = await get_www(domain)
     (
         mail_a,
@@ -167,6 +175,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
         domain,
         suffix,
         a,
+        ptr,
         cname,
         mx,
         mx_domain,
@@ -273,7 +282,9 @@ async def get_mx(domain):
 
 async def get_ptr(ip):
     try:
-        ptr = socket.getfqdn(ip)
+        result = await resolver.resolve_address(ip)
+        for rr in result:
+          ptr = (f"{rr}")
         if ptr == ip:
             ptr = "None"
     except Exception as e:
@@ -299,9 +310,12 @@ async def get_mail(domain):
         mail_ptr = await get_ptr(mail_a.split(", ")[0])
     else:
         mail_ptr = "None"
-
-    mail_spf = await get_spf("mail." + domain)
-    mail_dmarc = await get_dmarc("mail." + domain)
+    if mail_mx == "None":
+        mail_spf = "None"
+        mail_dmarc = "None"
+    else:
+        mail_spf = await get_spf("mail." + domain)
+        mail_dmarc = await get_dmarc("mail." + domain)
 
     return mail_a, mail_mx, mail_mx_domain, mail_suffix, mail_spf, mail_dmarc, mail_ptr
 
@@ -368,5 +382,3 @@ if __name__ == "__main__":
     final.to_parquet(output + "domains_updates.parquet")
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
-
-    # read in arrow file

@@ -33,3 +33,12 @@ Traceback (most recent call last):
     raise OSError(rf"Cannot save file into a non-existent directory: '{parent}'")
 OSError: Cannot save file into a non-existent directory: 'E:/domains-monitor/updates'
 script1.py failed. script2.py will not be run.
+22501757
+(236666, 8)
+Daily download completed successfully. Running DNS lookup...
+Starting...
+domain_update_daily2023-12-07.parquet
+check  (236666, 21)
+domain_update_daily2023-12-06.parquet
+check  (448885, 21)
+Elapsed time:  3872.311356306076
