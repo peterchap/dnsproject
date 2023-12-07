@@ -106,7 +106,7 @@ async def execute_fetcher_tasks(
             "dmarc",
             "www",
             "www_ptr",
-            "wwwcname",
+            "www_cname",
             "mail_a",
             "mail_mx",
             "mail_mx_domain",
