@@ -13,8 +13,7 @@ from datetime import date
 from aiolimiter import AsyncLimiter
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-    "X-Amzn-Trace-Id": "Root=1-6549623d-0da03b1f0eb65a331f8bd46c",
+    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0"
 }
 
 # dns_provider = ["192.168.1.221"]
