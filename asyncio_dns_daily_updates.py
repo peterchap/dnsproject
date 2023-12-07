@@ -6,9 +6,6 @@ import re
 import tldextract
 import os
 import datetime
-import pyarrow as pa
-import socket
-from time import perf_counter as timer
 from typing import List
 from loguru import logger as custom_logger
 
