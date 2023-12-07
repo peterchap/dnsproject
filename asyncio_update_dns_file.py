@@ -81,22 +81,23 @@ LOGGER = create_logger()
 date = datetime.datetime.now().strftime("%Y-%m-%d")
 
 
-async def execute_fetcher_tasks(
-    urls_select: List[str], batchcount: int, total_count: int
+sync def execute_fetcher_tasks(
+    urls_select: List[str], filename: str, total_count: int
 ):
     # start_time = timer()
-    limiter = AsyncLimiter(100, 1)
+    limiter = AsyncLimiter(120, 1)
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
             async with limiter:
-                task = g.create_task(fetch_url(url, total_count))
+                task = g.create_task(fetch_url(url, filename, total_count))
                 tasks.add(task)
         results = []
         keys = [
             "domain",
             "suffix",
             "a",
+            "ptr",
             "cname",
             "mx",
             "mx_domain",
@@ -104,8 +105,8 @@ async def execute_fetcher_tasks(
             "spf",
             "dmarc",
             "www",
-            "www_ptr",
-            "www_cname",
+            "wwwptr",
+            "wwwcname",
             "mail_a",
             "mail_mx",
             "mail_mx_domain",
@@ -113,22 +114,23 @@ async def execute_fetcher_tasks(
             "mail_spf",
             "mail_dmarc",
             "mail_ptr",
+            "create_date",
             "refresh_date",
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(20)}
+            res = {keys[y]: data[y] for y in range(22)}
             results.append(res)
         df = pd.DataFrame(results)
+        df["create_date"] = pd.to_datetime(df["create_date"])
         df["refresh_date"] = pd.to_datetime(df["refresh_date"])
         # (print("check ", df.shape))
-        LOGGER.success(
-            f"Executed Batch of {batchcount} in {time.perf_counter() - start_time:0.2f} seconds."
-        )
+        # LOGGER.success(
+        #  f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
     return df
 
 
-async def fetch_url(domain: str, total_count: int):
+async def fetch_url(domain: str, filename: str, total_count: int):
     """
     Fetch raw HTML from a URL prior to parsing.
     :param ClientSession session: Async HTTP requests session.
@@ -142,17 +144,24 @@ async def fetch_url(domain: str, total_count: int):
     domain = valid_pattern.sub("", domain)
     suffix = extract_suffix(domain)
     a = await get_A(domain)
-    ns = await get_ns(domain)
+    if a  == "None":
+       ptr  = "None"
+    else:
+       ptr = await get_ptr(a.split(", ")[0])
     cname = await get_cname(domain)
     mx, mx_domain, mx_suffix = await get_mx(domain)
-    spf = await get_spf(domain)
-    dmarc = await get_dmarc(domain)
+    if mx == "None":
+       spf = "None"
+       dmarc = "None"
+    else:
+       spf = await get_spf(domain)
+       dmarc = await get_dmarc(domain)
     www, www_ptr, www_cname = await get_www(domain)
     (
         mail_a,
         mail_mx,
         mail_mx_domain,
-        mail_mx_suffix,
+        mail_suffix,
         mail_spf,
         mail_dmarc,
         mail_ptr,
@@ -165,6 +174,7 @@ async def fetch_url(domain: str, total_count: int):
         domain,
         suffix,
         a,
+        ptr,
         cname,
         mx,
         mx_domain,
@@ -177,7 +187,7 @@ async def fetch_url(domain: str, total_count: int):
         mail_a,
         mail_mx,
         mail_mx_domain,
-        mail_mx_suffix,
+        mail_suffix,
         mail_spf,
         mail_dmarc,
         mail_ptr,
@@ -270,7 +280,9 @@ async def get_mx(domain):
 
 async def get_ptr(ip):
     try:
-        ptr = socket.getfqdn(ip)
+        result = await resolver.resolve_address(ip)
+        for rr in result:
+          ptr = (f"{rr}")
         if ptr == ip:
             ptr = "None"
     except Exception as e:
@@ -292,13 +304,16 @@ async def get_www(domain):
 async def get_mail(domain):
     mail_a = await get_A("mail." + domain)
     mail_mx, mail_mx_domain, mail_suffix = await get_mx("mail." + domain)
-    if mail_a != "No A":
+    if mail_a != "None":
         mail_ptr = await get_ptr(mail_a.split(", ")[0])
     else:
         mail_ptr = "None"
-
-    mail_spf = await get_spf("mail." + domain)
-    mail_dmarc = await get_dmarc("mail." + domain)
+    if mail_mx == "None":
+        mail_spf = "None"
+        mail_dmarc = "None"
+    else:
+        mail_spf = await get_spf("mail." + domain)
+        mail_dmarc = await get_dmarc("mail." + domain)
 
     return mail_a, mail_mx, mail_mx_domain, mail_suffix, mail_spf, mail_dmarc, mail_ptr
 
@@ -331,13 +346,6 @@ async def get_dmarc(domain):
     return dmarc
 
 
-async def get_create_date(filename):
-    date_format = "%Y-%m-%d"
-    x = filename.split(".")[0]
-    b = x[20:30]
-    date = str(datetime.datetime.strptime(b, date_format))
-    return date
-
 
 if __name__ == "__main__":
     directory = "/root/dnsproject/"
@@ -360,6 +368,7 @@ if __name__ == "__main__":
             pa.field("domain", pa.string()),
             pa.field("suffix", pa.string()),
             pa.field("a", pa.string()),
+            pa.field("ptr", pa.string()),
             pa.field("cname", pa.string()),
             pa.field("mx", pa.string()),
             pa.field("mx_domain", pa.string()),
