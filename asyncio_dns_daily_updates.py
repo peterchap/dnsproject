@@ -6,9 +6,6 @@ import re
 import tldextract
 import os
 import datetime
-import pyarrow as pa
-import socket
-from time import perf_counter as timer
 from typing import List
 from loguru import logger as custom_logger
 
@@ -16,8 +13,7 @@ from datetime import date
 from aiolimiter import AsyncLimiter
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-    "X-Amzn-Trace-Id": "Root=1-6549623d-0da03b1f0eb65a331f8bd46c",
+    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0"
 }
 
 # dns_provider = ["192.168.1.221"]
@@ -71,7 +67,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/home/peter/Documents/dnsproject/"
+    directory = "/root/dnsproject/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -85,7 +81,7 @@ async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
 ):
     # start_time = timer()
-    limiter = AsyncLimiter(100, 1)
+    limiter = AsyncLimiter(120, 1)
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
@@ -97,6 +93,7 @@ async def execute_fetcher_tasks(
             "domain",
             "suffix",
             "a",
+            "ptr",
             "cname",
             "mx",
             "mx_domain",
@@ -118,7 +115,7 @@ async def execute_fetcher_tasks(
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(21)}
+            res = {keys[y]: data[y] for y in range(22)}
             results.append(res)
         df = pd.DataFrame(results)
         df["create_date"] = pd.to_datetime(df["create_date"])
@@ -143,11 +140,18 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     domain = valid_pattern.sub("", domain)
     suffix = extract_suffix(domain)
     a = await get_A(domain)
-    ns = await get_ns(domain)
+    if a  == "None":
+       ptr  = "None"
+    else:
+       ptr = await get_ptr(a.split(", ")[0])
     cname = await get_cname(domain)
     mx, mx_domain, mx_suffix = await get_mx(domain)
-    spf = await get_spf(domain)
-    dmarc = await get_dmarc(domain)
+    if mx == "None":
+       spf = "None"
+       dmarc = "None"
+    else:
+       spf = await get_spf(domain)
+       dmarc = await get_dmarc(domain)
     www, www_ptr, www_cname = await get_www(domain)
     (
         mail_a,
@@ -167,6 +171,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
         domain,
         suffix,
         a,
+        ptr,
         cname,
         mx,
         mx_domain,
@@ -273,17 +278,19 @@ async def get_mx(domain):
 
 async def get_ptr(ip):
     try:
-        ptr = socket.getfqdn(ip)
+        result = await resolver.resolve_address(ip)
+        for rr in result:
+          ptr = (f"{rr}")
         if ptr == ip:
             ptr = "None"
     except Exception as e:
-        ptr = e
+        ptr = "None"
     return ptr
 
 
 async def get_www(domain):
     www = await get_A("www." + domain)
-    if www == "No A":
+    if www == "None":
         www_ptr = "None"
     else:
         www_ptr = await get_ptr(www.split(", ")[0])
@@ -295,13 +302,16 @@ async def get_www(domain):
 async def get_mail(domain):
     mail_a = await get_A("mail." + domain)
     mail_mx, mail_mx_domain, mail_suffix = await get_mx("mail." + domain)
-    if mail_a != "No A":
+    if mail_a != "None":
         mail_ptr = await get_ptr(mail_a.split(", ")[0])
     else:
         mail_ptr = "None"
-
-    mail_spf = await get_spf("mail." + domain)
-    mail_dmarc = await get_dmarc("mail." + domain)
+    if mail_mx == "None":
+        mail_spf = "None"
+        mail_dmarc = "None"
+    else:
+        mail_spf = await get_spf("mail." + domain)
+        mail_dmarc = await get_dmarc("mail." + domain)
 
     return mail_a, mail_mx, mail_mx_domain, mail_suffix, mail_spf, mail_dmarc, mail_ptr
 
@@ -337,37 +347,35 @@ async def get_dmarc(domain):
 async def get_create_date(filename):
     date_format = "%Y-%m-%d"
     x = filename.split(".")[0]
-    b = x[20:30]
+    b = x[19:29]
     date = str(datetime.datetime.strptime(b, date_format))
     return date
 
 
 if __name__ == "__main__":
     print("Starting...")
-    # directory = "/root/dnsproject/"
-    # output = "/root/home/peter/Documents/updates/"
+    directory = "/root/updates/"
+    output = "/root/dnsresults/"
     #directory = "E:/domains-monitor/updates/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
     extract.update()
-    directory = "/home/peter/Documents/updates/"
-    output = "/home/peter/Documents/dnsproject/"
+    #directory = "/home/peter/Documents/updates/"
+    #output = "/home/peter/Documents/dnsproject/"
     start_time = time.time()
 
-    # download_path = "/home/peter/Downloads/"
-    # extract_dir = "/home/peter/Downloads/"
+    #download_path = "/home/peter/Downloads/"
+    #extract_dir = "/home/peter/Downloads/"
     final = pd.DataFrame()
     for file in os.listdir(directory):
         print(file)
         df = pd.read_parquet(directory + file, engine="pyarrow", columns=["domain"])
-        df = df.head(50)
         urls_to_fetch = df["domain"].tolist()
         len = df.shape[0]
         df = asyncio.run(execute_fetcher_tasks(urls_to_fetch, file, len))
         final = pd.concat([final, df])
         print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(directory + "domains_test.parquet")
+    final.to_parquet(output + "domains_updates.parquet")
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
-    # read in arrow file
