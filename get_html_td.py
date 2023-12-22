@@ -6,7 +6,6 @@ import time
 from aiolimiter import AsyncLimiter
 from datetime import datetime
 from loguru import logger as custom_logger
-from random import randint
 from sys import stdout
 
 directory = "E:/domains-monitor/"
@@ -65,7 +64,6 @@ def create_logger():
 async def fetch_url(session, url):
     try:
         html = await session.get(url)
-        LOGGER.info(f"url: {url} - encoding: {html.encoding}")
         LOGGER.info(f"url: {url} - status: {html.status_code}")
         return html.status_code, html.text
     except httpx.ConnectError as e:
@@ -75,9 +73,10 @@ async def fetch_url(session, url):
         LOGGER.error(f"Connection timeout for {e.request.url!r}.")
         return 103, f"Connection timeout for {e.request.url!r} - {e}"
     except httpx.RequestError as e:
+        LOGGER.error(f"Request error block for {e.request.url!r}.")
         return (
             104,
-            f"An error occurred while requesting {e.request.url!r}.",
+            f"Request error block {e.request.url!r}.",
         )
     except httpx.HTTPStatusError as e:
         LOGGER.error(
@@ -89,31 +88,29 @@ async def fetch_url(session, url):
         return 101, f"Error {e} for {url}"
 
 
-async def save_to_db(db, url, status, html):
+async def save_to_db(db, url, domain, status, html):
     try:
         date = datetime.now()
 
         await db.execute(
-            "INSERT INTO html (url, status, html, date) VALUES (?, ?, ?, ?)",
-            (url, status, html, date),
+            "INSERT INTO html (url, domain, status, html, date) VALUES (?, ?, ?, ?, ?)",
+            (url, domain, status, html, date),
         )
         await db.commit()
-        LOGGER.success(f"Saved {url} to db")
         return 1
     except Exception as e:
         print(f"Error saving to db: {e}")
-        LOGGER.error(f"Error {url} saving to db: {e}")
-        return 0
 
 
-async def fetch_and_save(session, db, url):
-    status, html = await fetch_url(session, url)
-    if html:
-        result = await save_to_db(db, url, status, html)
-        return result
-    else:
-        result = await save_to_db(db, url, status, "No HTML")
-        return 0
+async def fetch_and_save(session, db, domain, url, limiter):
+    async with limiter:
+        status, html = await fetch_url(session, url)
+        if html:
+            result = await save_to_db(db, url, domain, status, html)
+            return result
+        else:
+            result = await save_to_db(db, url, domain, status, "No HTML")
+            return result
 
 
 async def main(db_path, data):
@@ -132,24 +129,25 @@ async def main(db_path, data):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     }
     # ssl_context = ssl.create_default_context(cafile=certifi.where())
-    timeout = httpx.Timeout(500.0, connect=60.0)
+    timeout = httpx.Timeout(2.0, connect=5.0)
     async with httpx.AsyncClient(
         headers=headers, timeout=timeout, verify=False, follow_redirects=True
     ) as session:
-        limiter = AsyncLimiter(120, 1)
+        limiter = AsyncLimiter(max_rate=5, time_period=0.1)
         async with aiosqlite.connect(db_path) as db:
-            async with limiter:
-                async with asyncio.TaskGroup() as tg:
-                    tasks = set()
-                    for domain in data["domain"]:
-                        url = f"https://{domain}"
-                        task = tg.create_task(fetch_and_save(session, db, url))
-                        tasks.add(task)
-                count = 0
-                for t in tasks:
-                    res = await t
-                    count += res
-            LOGGER.success(f"Saved successes {count} URLs to db")
+            async with asyncio.TaskGroup() as tg:
+                tasks = set()
+                for domain in data["domain"]:
+                    url = f"https://{domain}"
+                    task = tg.create_task(
+                        fetch_and_save(session, db, domain, url, limiter)
+                    )
+                    tasks.add(task)
+            count = 0
+            for t in tasks:
+                res = await t
+                count += res
+        LOGGER.success(f"Saved successes {count} URLs to db")
 
 
 """
@@ -184,11 +182,13 @@ if __name__ == "__main__":
     start = time.time()
     print("Starting at", datetime.now())
     for idx, frame in enumerate(df.iter_slices(n_rows=10000)):
-        print(f"Starting batch {idx} at: {time.time()}")
-        LOGGER.info(f"Starting batch {idx} at: {time.time()}")
+        st = datetime.now()
+        print(f"Starting batch {idx} at: {st}")
+        LOGGER.info(f"Starting batch {idx} at: {st}")
         asyncio.run(main(db_path, frame))
-        LOGGER.info(f"Finished batch {idx} at: {time.time()}")
-        print(f"Finished batch {idx} at: {time.time()}")
+        et = datetime.now()
+        LOGGER.info(f"Finished batch {idx} at: {et}")
+        print(f"Finished batch {idx} at: {et}")
     end = time.time()
     LOGGER.info(f("Finished at {end}"))
     LOGGER.info(f"Total time taken: {end-start} seconds")
