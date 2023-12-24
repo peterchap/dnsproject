@@ -88,10 +88,8 @@ async def fetch_url(session, url):
         return 101, f"Error {e} for {url}"
 
 
-async def save_to_db(db, url, domain, status, html):
+async def save_to_db(db, url, domain, status, html, date):
     try:
-        date = datetime.now()
-
         await db.execute(
             "INSERT INTO html (url, domain, status, html, date) VALUES (?, ?, ?, ?, ?)",
             (url, domain, status, html, date),
@@ -103,13 +101,17 @@ async def save_to_db(db, url, domain, status, html):
 
 
 async def fetch_and_save(session, db, domain, url, limiter):
+    await db.execute(
+        "CREATE TABLE IF NOT EXISTS html (url, domain, status, html, date)"
+    )
+    date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     async with limiter:
         status, html = await fetch_url(session, url)
         if html:
-            result = await save_to_db(db, url, domain, status, html)
+            result = await save_to_db(db, url, domain, status, html, date)
             return result
         else:
-            result = await save_to_db(db, url, domain, status, "No HTML")
+            result = await save_to_db(db, url, domain, status, "No HTML", date)
             return result
 
 
