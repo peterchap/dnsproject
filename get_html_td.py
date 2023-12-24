@@ -8,7 +8,7 @@ from datetime import datetime
 from loguru import logger as custom_logger
 from sys import stdout
 
-directory = "E:/domains-monitor/"
+logdir = "/root/"
 LOGGER = custom_logger
 
 
@@ -57,7 +57,7 @@ def create_logger():
     """
     custom_logger.remove()
     custom_logger.add(stdout, colorize=True, format=formatter)
-    custom_logger.add(directory + "dnslog.log", encoding="utf-8")
+    custom_logger.add(logdir + "dnslog.log", encoding="utf-8")
     return custom_logger
 
 
@@ -99,7 +99,7 @@ async def save_to_db(db, url, domain, status, html):
         await db.commit()
         return 1
     except Exception as e:
-        print(f"Error saving to db: {e}")
+        LOGGER.error(f"Error saving to db: {e}")
 
 
 async def fetch_and_save(session, db, domain, url, limiter):
@@ -166,30 +166,27 @@ def get_random_header(header_list):
 """
 
 if __name__ == "__main__":
-    directory = "E:/domains-monitor/"
+    directory = "/root/"
     db_path = directory + "domains.db"
-    domain_file = "contabo1_domains_redone.parquet"
+    domain_file = "dns_input.parquet"
     # header_list = get_headers_list()
     LOGGER = create_logger()
 
     df = (
         pl.read_parquet(directory + domain_file)
-        .filter(pl.col("www") != "None", pl.col("a") != "None")
+        .filter(pl.col("ip") != "None")
         .select(["domain"])
     )
-    print(f"Shape: {df.shape} - {df.columns} Batches: {df.shape[0]/10000}")
+    LOGGER.info(f"Shape: {df.shape} - {df.columns} Batches: {df.shape[0]/10000}")
     LOGGER.info("Started at %s", datetime.now())
     start = time.time()
-    print("Starting at", datetime.now())
+    LOGGER.info("Starting at", datetime.now())
     for idx, frame in enumerate(df.iter_slices(n_rows=10000)):
         st = datetime.now()
-        print(f"Starting batch {idx} at: {st}")
         LOGGER.info(f"Starting batch {idx} at: {st}")
         asyncio.run(main(db_path, frame))
         et = datetime.now()
         LOGGER.info(f"Finished batch {idx} at: {et}")
-        print(f"Finished batch {idx} at: {et}")
     end = time.time()
     LOGGER.info(f("Finished at {end}"))
     LOGGER.info(f"Total time taken: {end-start} seconds")
-    print(f"Total time taken: {end - start} seconds")

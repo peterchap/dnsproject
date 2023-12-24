@@ -1,3 +1,5 @@
+aiolimiter
+aiosqlite
 asyncio
 boto3
 datetime
@@ -5,8 +7,7 @@ dnspython
 httpx
 loguru
 pandas
+polars
 pyarrow
 typing
-aiolimiter
-s3fs
 tldextract
