@@ -172,11 +172,7 @@ if __name__ == "__main__":
     # header_list = get_headers_list()
     LOGGER = create_logger()
 
-    df = (
-        pl.read_parquet(directory + domain_file)
-        .filter(pl.col("ip") != "None")
-        .select(["domain"])
-    )
+    df = pl.read_parquet(directory + domain_file).select(["domain"])
     LOGGER.info(f"Shape: {df.shape} - {df.columns} Batches: {df.shape[0]/10000}")
     LOGGER.info("Started at %s", datetime.now())
     start = time.time()
