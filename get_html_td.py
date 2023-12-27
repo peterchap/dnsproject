@@ -98,6 +98,7 @@ async def save_to_db(db, url, domain, status, html, date):
         return 1
     except Exception as e:
         LOGGER.error(f"Error saving to db: {e}")
+        return 0
 
 
 async def fetch_and_save(session, db, domain, url, limiter):
