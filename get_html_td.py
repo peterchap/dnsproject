@@ -76,7 +76,7 @@ async def fetch_url(session, url):
         LOGGER.error(f"Request error block for {e.request.url!r}.")
         return (
             104,
-            f"Request error block {e.request.url!r}.",
+            f"Request error block {e.request.url!r}."
         )
     except httpx.HTTPStatusError as e:
         LOGGER.error(
