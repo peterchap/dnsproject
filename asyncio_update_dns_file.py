@@ -70,7 +70,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/root/dnsproject/"
+    directory = "/root/"
     #directory = "/home/peter/Documents/updates/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
@@ -346,7 +346,7 @@ async def get_dmarc(domain):
 
 
 if __name__ == "__main__":
-    directory = "/root/dnsproject/"
+    directory = "/root/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
     extract.update()
     # bucket_name = "domain-monitor-results"
