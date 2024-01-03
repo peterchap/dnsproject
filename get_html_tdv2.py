@@ -11,8 +11,8 @@ from loguru import logger as custom_logger
 from googletrans import Translator
 from sys import stdout
 
-# logdir = "/root/"
-logdir = "E:/domains-monitor/"
+logdir = "/root/"
+#logdir = "E:/domains-monitor/"
 LOGGER = custom_logger
 
 
@@ -285,8 +285,8 @@ async def main(domains):
 
 
 if __name__ == "__main__":
-    # directory = "/root/"
-    directory = "E:/domains-monitor/"
+    directory = "/root/"
+    #directory = "E:/domains-monitor/"
     db_path = directory + "domains.duckdb"
     domain_file = "contabo1_domains_redone.parquet"
     # domain_file = "dns_input.parquet"
