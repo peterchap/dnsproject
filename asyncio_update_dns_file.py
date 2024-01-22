@@ -366,7 +366,7 @@ if __name__ == "__main__":
             pa.field("domain", pa.string()),
             pa.field("ns", pa.string()),
             pa.field("ip", pa.string()),
-            pa.field("country", pa.string()),
+            pa.field("country-dm", pa.string()),
             pa.field("suffix", pa.string()),
             pa.field("a", pa.string()),
             pa.field("ptr", pa.string()),
