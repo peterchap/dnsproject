@@ -13,7 +13,7 @@ api = f'https://domains-monitor.com/api/v1/{token}/get-detailed/{zone}/list/{for
 #print(api)
 
 
-zip_file_path = '/root/dnsproject/'
+zip_file_path = '/root/dnsall/'
 input_file = 'domainsall.zip'
 with requests.get(api, stream=True) as response:
     response.raise_for_status()  # This will raise an error for non-200 responses
@@ -25,7 +25,7 @@ print('Downloaded zip file')
 
 zip_folder = "domainsall.zip"
 file = "domains-detailed.csv"
-directory = "/root/dnsproject/"
+directory = "/root/dnsall/"
 
 # Extract the CSV file from the ZIP
 with zipfile.ZipFile(directory + zip_folder, 'r') as zip_ref:
