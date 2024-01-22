@@ -76,7 +76,7 @@ async def fetch_url(session, url):
         LOGGER.error(f"Request error block for {e.request.url!r}.")
         return (
             104,
-            f"Request error block {e.request.url!r}.",
+            f"Request error block {e.request.url!r}."
         )
     except httpx.HTTPStatusError as e:
         LOGGER.error(
@@ -98,6 +98,7 @@ async def save_to_db(db, url, domain, status, html, date):
         return 1
     except Exception as e:
         LOGGER.error(f"Error saving to db: {e}")
+        return 0
 
 
 async def fetch_and_save(session, db, domain, url, limiter):

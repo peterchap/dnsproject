@@ -23,8 +23,8 @@ headers = {
 dns_provider = ["127.0.0.1"]
 resolver = dns.asyncresolver.Resolver()
 resolver.nameservers = dns_provider
-resolver.lifetime = 2.0
-resolver.timeout = 2.0
+resolver.lifetime = 1.0
+resolver.timeout = 1.0
 
 
 def formatter(log: dict) -> str:
@@ -70,7 +70,7 @@ def create_logger():
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/root/dnsproject/"
+    directory = "/root/"
     #directory = "/home/peter/Documents/updates/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
@@ -85,7 +85,7 @@ async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
 ):
     # start_time = timer()
-    limiter = AsyncLimiter(120, 1)
+    limiter = AsyncLimiter(100, 1)
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
@@ -346,7 +346,7 @@ async def get_dmarc(domain):
 
 
 if __name__ == "__main__":
-    directory = "/root/dnsproject/"
+    directory = "/root/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
     extract.update()
     # bucket_name = "domain-monitor-results"
