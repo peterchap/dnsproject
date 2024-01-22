@@ -8,9 +8,16 @@ from zipfile import ZipFile
 token = '5123dedd3e04a07c6380b8aec0ba30b2'
 zone = 'full'
 format = 'zip'
-cols = ["domain", "ns", "ip", "country", "web_server", "email", "Alexa_rank", "phone"]
+cols = ["domain", "ns", "ip", "country-dm", "web_server", "email", "Alexa_rank", "phone"]
 api = f'https://domains-monitor.com/api/v1/{token}/get-detailed/{zone}/list/{format}/'
-#print(api)
+schema = pa.schema(
+    [
+        pa.field("domain", pa.string()),
+        pa.field("ns", pa.string()),
+        pa.field("ip", pa.string()),
+        pa.field("country-dm", pa.string()),
+    ]
+)
 
 
 zip_file_path = '/root/dnsall/'
@@ -50,7 +57,7 @@ def skip_bad_rows(row):
 read_options = csv.ReadOptions(
         use_threads=True, 
         block_size=small_chunk_size,
-        autogenerate_column_names=True,
+        column_names=cols,
         encoding="utf-8"
     )
 parse_options = csv.ParseOptions(
@@ -62,23 +69,24 @@ parse_options = csv.ParseOptions(
 reader = csv.open_csv(directory + file, read_options= read_options, parse_options= parse_options)
 while True:
     try:
-       batch  = next(reader)
+       data  = next(reader)
        # Select only the first column
        first_column = batch.column(0)
 
-       # Create a new RecordBatch with only the first column
-       single_column_batch = pa.RecordBatch.from_arrays([first_column], ["domain"])
-
+       # Create a new RecordBatch with selected columns
+       batch = data.select(["domain", "ns", "ip", "country"])
        # Accumulate data
-       accumulated_batches.append(single_column_batch)
+       accumulated_batches.append(batch)
 
-       rows_processed += single_column_batch.num_rows
+       rows_processed += batch.num_rows
 
        # Write to Parquet file if the chunk limit is reached or end of file is reached
        if rows_processed >= (270000000 // number_of_files):
            accumulated_table = pa.Table.from_batches(accumulated_batches)
            file_name = f'{directory}dma_{file_counter}.parquet'
-           pq.write_table(accumulated_table, file_name)
+           writer = pq.ParquetWriter(file_name, schema)
+           writer.write_table(accumulated_table)
+           writer.close()
            file_counter += 1
            accumulated_batches = []
            rows_processed = 0
@@ -87,6 +95,8 @@ while True:
         if accumulated_batches:
             accumulated_table = pa.Table.from_batches(accumulated_batches)
             file_name = f'{directory}dma_{file_counter}.parquet'
-            pq.write_table(accumulated_table, file_name)
+            writer = pq.ParquetWriter(file_name, schema)
+            writer.write_table(accumulated_table)
+            writer.close()
         break
 print("Conversion completed.")
