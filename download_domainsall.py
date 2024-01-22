@@ -70,9 +70,6 @@ reader = csv.open_csv(directory + file, read_options= read_options, parse_option
 while True:
     try:
        data  = next(reader)
-       # Select only the first column
-       first_column = batch.column(0)
-
        # Create a new RecordBatch with selected columns
        batch = data.select(["domain", "ns", "ip", "country"])
        # Accumulate data
