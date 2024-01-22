@@ -364,6 +364,9 @@ if __name__ == "__main__":
     schema = pa.schema(
         [
             pa.field("domain", pa.string()),
+            pa.field("ns", pa.string()),
+            pa.field("ip", pa.string()),
+            pa.field("country", pa.string()),
             pa.field("suffix", pa.string()),
             pa.field("a", pa.string()),
             pa.field("ptr", pa.string()),
@@ -390,6 +393,7 @@ if __name__ == "__main__":
         with pa.ipc.new_stream(sink, schema) as writer:
             start = 0
             batchcount = 0
+            offset = 0
             step = 50000
             for i in range(0, len, step):
                 df = asyncio.run(
@@ -397,10 +401,13 @@ if __name__ == "__main__":
                         urls_to_fetch[start : i + step], batchcount, len
                     )
                 )
+                dmdata = table[offset : offset + step].to_pandas()
+                df = pd.merge(dmdata, df, on="domain", how="left")
                 batch = pa.RecordBatch.from_pandas(df, schema=schema)
                 writer.write_batch(batch)
                 start = i + step
                 batchcount = batchcount + step
+                offset = offset + step
                 LOGGER.success(
                     f"Executed Batch in {time.time() - start_time:0.2f} seconds."
                 )
