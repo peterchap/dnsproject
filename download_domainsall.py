@@ -71,7 +71,7 @@ while True:
     try:
        data  = next(reader)
        # Create a new RecordBatch with selected columns
-       batch = data.select(["domain", "ns", "ip", "country"])
+       batch = data.select(["domain", "ns", "ip", "country-dm"])
        # Accumulate data
        accumulated_batches.append(batch)
 
