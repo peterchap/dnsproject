@@ -23,8 +23,8 @@ headers = {
 dns_provider = ["127.0.0.1"]
 resolver = dns.asyncresolver.Resolver()
 resolver.nameservers = dns_provider
-resolver.lifetime = 1.0
-resolver.timeout = 1.0
+resolver.lifetime = 2.0
+resolver.timeout = 2.0
 
 
 def formatter(log: dict) -> str:
@@ -122,9 +122,6 @@ async def execute_fetcher_tasks(
             results.append(res)
         df = pd.DataFrame(results)
         df["refresh_date"] = pd.to_datetime(df["refresh_date"])
-        # (print("check ", df.shape))
-        # LOGGER.success(
-        #  f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
     return df
 
 
@@ -165,8 +162,6 @@ async def fetch_url(domain: str, filename: str, total_count: int):
         mail_ptr,
     ) = await get_mail(domain)
     refresh_date = datetime.datetime.now()
-
-    # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
 
     return [
         domain,
@@ -359,6 +354,7 @@ if __name__ == "__main__":
     print(len(urls_to_fetch))
     len = len(urls_to_fetch)
     start_time = time.time()
+    LOGGER.info(f"Start time: {start_time}")
     start = 0
     # end = 0
     schema = pa.schema(
@@ -409,6 +405,8 @@ if __name__ == "__main__":
                 batchcount = batchcount + step
                 offset = offset + step
                 LOGGER.success(
-                    f"Executed Batch in {time.time() - start_time:0.2f} seconds."
+                    f"Executed Batch {i} of {len} in {time.time() - start_time:0.2f} seconds."
                 )
+    LOGGER.info(f"Finish Time: {time.time()}")
+    LOGGER.info(f"Elaspsed time: {time.time() - start_time}")
     print("Elapsed time: ", time.time() - start_time)
