@@ -298,7 +298,7 @@ async def get_ptr(ip):
 
 
 async def get_www(domain):
-    www = await get_A("www." + domain)
+    www, wwwint = await get_A("www." + domain)
     if www == "None":
         www_ptr = "None"
     else:
@@ -309,7 +309,7 @@ async def get_www(domain):
 
 
 async def get_mail(domain):
-    mail_a = await get_A("mail." + domain)
+    mail_a, mailint = await get_A("mail." + domain)
     mail_mx, mail_mx_domain, mail_suffix = await get_mx("mail." + domain)
     if mail_a != "None":
         mail_ptr = await get_ptr(mail_a)
