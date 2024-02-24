@@ -291,9 +291,9 @@ async def get_ptr(ip):
         for rr in result:
           ptr = (f"{rr}")
         if ptr == ip:
-            ptr = "None"
+            return "None"
     except Exception as e:
-        ptr = "None"
+        return "None"
     return ptr.list(ptr).split(",")[0].rstrip(".")
 
 
