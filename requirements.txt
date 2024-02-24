@@ -5,6 +5,7 @@ boto3
 datetime
 dnspython
 httpx
+ipaddress
 loguru
 pandas
 polars
