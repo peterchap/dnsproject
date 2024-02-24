@@ -294,7 +294,7 @@ async def get_ptr(ip):
             ptr = "None"
     except Exception as e:
         ptr = "None"
-    return ptr.to_text().rstrip(".")
+    return ptr.rstrip(".")
 
 
 async def get_www(domain):
