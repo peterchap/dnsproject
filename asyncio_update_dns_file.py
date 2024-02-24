@@ -6,7 +6,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import re
 import csv
-import os
+import ipaddress
 import tldextract
 import datetime
 from time import perf_counter as timer
@@ -25,6 +25,7 @@ resolver = dns.asyncresolver.Resolver()
 resolver.nameservers = dns_provider
 resolver.lifetime = 2.0
 resolver.timeout = 2.0
+
 
 
 def formatter(log: dict) -> str:
@@ -79,7 +80,14 @@ def create_logger():
 
 LOGGER = create_logger()
 date = datetime.datetime.now().strftime("%Y-%m-%d")
+LOGGER.info(f"Start time: {date}")
+# Convert IP addresses to integers for comparison
 
+def ip_to_int(ip):
+    if ip != ip:
+        return None
+    else:
+        return int(ipaddress.ip_address(ip))
 
 async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
@@ -97,6 +105,7 @@ async def execute_fetcher_tasks(
             "domain",
             "suffix",
             "a",
+            "ip_int",
             "ptr",
             "cname",
             "mx",
@@ -118,7 +127,7 @@ async def execute_fetcher_tasks(
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(21)}
+            res = {keys[y]: data[y] for y in range(22)}
             results.append(res)
         df = pd.DataFrame(results)
         df["refresh_date"] = pd.to_datetime(df["refresh_date"])
@@ -138,7 +147,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
     domain = valid_pattern.sub("", domain)
     suffix = extract_suffix(domain)
-    a = await get_A(domain)
+    a, ip_int = await get_A(domain)
     if a  == "None":
        ptr  = "None"
     else:
@@ -167,6 +176,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
         domain,
         suffix,
         a,
+        ip_int,
         ptr,
         cname,
         mx,
@@ -226,7 +236,11 @@ async def get_A(domain):
         a = listToString(a).rstrip(",")
     except Exception as e:
         a = "None"
-    return a
+    if a == "None":
+        ip_int = None
+    else:
+        ip_int = ip_to_int(a.split(", ")[0])
+    return a, ip_int
 
 
 async def get_ns(domain):
@@ -280,7 +294,7 @@ async def get_ptr(ip):
             ptr = "None"
     except Exception as e:
         ptr = "None"
-    return ptr
+    return ptr.to_text().rstrip(".")
 
 
 async def get_www(domain):
@@ -365,6 +379,7 @@ if __name__ == "__main__":
             pa.field("country-dm", pa.string()),
             pa.field("suffix", pa.string()),
             pa.field("a", pa.string()),
+            pa.field("ip_int", pa.int64()),
             pa.field("ptr", pa.string()),
             pa.field("cname", pa.string()),
             pa.field("mx", pa.string()),
