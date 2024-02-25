@@ -1,5 +1,6 @@
 import asyncio
 import dns.asyncresolver
+import ipaddress
 import time
 import pandas as pd
 import re
@@ -63,11 +64,11 @@ def formatter(log: dict) -> str:
 
 
 def create_logger():
-    """
+    """dn
     Create custom logger.
     :returns: custom_logger
     """
-    directory = "/root/dnsproject/"
+    directory = "/root/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -76,12 +77,17 @@ def create_logger():
 LOGGER = create_logger()
 date = date.today().strftime("%Y-%m-%d")
 
+def ip_to_int(ip):
+    if ip != ip:
+        return None
+    else:
+        return int(ipaddress.ip_address(ip))
 
 async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
 ):
     # start_time = timer()
-    limiter = AsyncLimiter(120, 1)
+    limiter = AsyncLimiter(100, 1)
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
@@ -93,6 +99,7 @@ async def execute_fetcher_tasks(
             "domain",
             "suffix",
             "a",
+            "ip_int",
             "ptr",
             "cname",
             "mx",
@@ -115,7 +122,7 @@ async def execute_fetcher_tasks(
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(22)}
+            res = {keys[y]: data[y] for y in range(23)}
             results.append(res)
         df = pd.DataFrame(results)
         df["create_date"] = pd.to_datetime(df["create_date"])
@@ -139,7 +146,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
     domain = valid_pattern.sub("", domain)
     suffix = extract_suffix(domain)
-    a = await get_A(domain)
+    a, ip_int = await get_A(domain)
     if a  == "None":
        ptr  = "None"
     else:
@@ -171,6 +178,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
         domain,
         suffix,
         a,
+        ip_int,
         ptr,
         cname,
         mx,
@@ -231,7 +239,11 @@ async def get_A(domain):
         a = listToString(a).rstrip(",")
     except Exception as e:
         a = "None"
-    return a
+    if a == "None":
+        ip_int = None
+    else:
+        ip_int = ip_to_int(a.split(", ")[0])
+    return a, ip_int
 
 
 async def get_ns(domain):
@@ -282,25 +294,25 @@ async def get_ptr(ip):
         for rr in result:
           ptr = (f"{rr}")
         if ptr == ip:
-            ptr = "None"
+            return "None"
     except Exception as e:
-        ptr = "None"
-    return ptr
+        return "None"
+    return ptr.rstrip(".")
 
 
 async def get_www(domain):
-    www = await get_A("www." + domain)
+    www, wwwint = await get_A("www." + domain)
     if www == "None":
         www_ptr = "None"
     else:
-        www_ptr = await get_ptr(www.split(", ")[0])
+        www_ptr = await get_ptr(www)
     www_cname = await get_cname("www." + domain)
 
     return www, www_ptr, www_cname
 
 
 async def get_mail(domain):
-    mail_a = await get_A("mail." + domain)
+    mail_a, mailint = await get_A("mail." + domain)
     mail_mx, mail_mx_domain, mail_suffix = await get_mx("mail." + domain)
     if mail_a != "None":
         mail_ptr = await get_ptr(mail_a.split(", ")[0])
