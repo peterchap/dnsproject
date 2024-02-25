@@ -291,28 +291,28 @@ async def get_ptr(ip):
         for rr in result:
           ptr = (f"{rr}")
         if ptr == ip:
-            ptr = "None"
+            return "None"
     except Exception as e:
-        ptr = "None"
-    return ptr.to_text().rstrip(".")
+        return "None"
+    return ptr.rstrip(".")
 
 
 async def get_www(domain):
-    www = await get_A("www." + domain)
+    www, wwwint = await get_A("www." + domain)
     if www == "None":
         www_ptr = "None"
     else:
-        www_ptr = await get_ptr(www.split(", ")[0])
+        www_ptr = await get_ptr(www)
     www_cname = await get_cname("www." + domain)
 
     return www, www_ptr, www_cname
 
 
 async def get_mail(domain):
-    mail_a = await get_A("mail." + domain)
+    mail_a, mailint = await get_A("mail." + domain)
     mail_mx, mail_mx_domain, mail_suffix = await get_mx("mail." + domain)
     if mail_a != "None":
-        mail_ptr = await get_ptr(mail_a.split(", ")[0])
+        mail_ptr = await get_ptr(mail_a)
     else:
         mail_ptr = "None"
     if mail_mx == "None":
