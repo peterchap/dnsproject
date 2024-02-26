@@ -375,14 +375,18 @@ if __name__ == "__main__":
     final = pd.DataFrame()
     for file in os.listdir(directory):
         print(file)
-        df = pd.read_parquet(directory + file, engine="pyarrow", columns=["domain"])
+        df = pd.read_parquet(directory + file, engine="pyarrow", columns=["domain", "ip", "country"])
+        print("check 1 ", df.shape)
+        df.rename(columns={"country": "country-dm"}, inplace=True)
         urls_to_fetch = df["domain"].tolist()
         len = df.shape[0]
-        df = asyncio.run(execute_fetcher_tasks(urls_to_fetch, file, len))
-        final = pd.concat([final, df])
-        print("check ", final.shape)
+        results = asyncio.run(execute_fetcher_tasks(urls_to_fetch, file, len))
+        print("check 2 ", results.shape)
+        final = pd.merge(df, results, on="domain", how="left")
+        print("check 3 ", final.shape)
+        final.to_parquet(output + "processed_" + file, engine="pyarrow")
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(output + "processed" + file, engine="pyarrow")
+    
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
