@@ -368,15 +368,10 @@ if __name__ == "__main__":
     print("Starting...")
     directory = "/root/updates/"
     output = "/root/dnsresults/"
-    #directory = "E:/domains-monitor/updates/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
     extract.update()
-    #directory = "/home/peter/Documents/updates/"
-    #output = "/home/peter/Documents/dnsproject/"
     start_time = time.time()
 
-    #download_path = "/home/peter/Downloads/"
-    #extract_dir = "/home/peter/Downloads/"
     final = pd.DataFrame()
     for file in os.listdir(directory):
         print(file)
@@ -387,7 +382,7 @@ if __name__ == "__main__":
         final = pd.concat([final, df])
         print("check ", final.shape)
         LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
-    final.to_parquet(output + "domains_updates.parquet")
+    final.to_parquet(output + "processed" + file, engine="pyarrow")
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
 
