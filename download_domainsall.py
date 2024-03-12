@@ -1,4 +1,5 @@
 import requests
+import os
 import pyarrow.csv as csv
 import pyarrow.parquet as pq
 import pyarrow as pa
@@ -39,6 +40,9 @@ with zipfile.ZipFile(directory + zip_folder, 'r') as zip_ref:
     zip_ref.extract(file, directory)
 
 print("file unzipped")
+
+os.remove(directory + zip_folder)
+print("zip removed")
 
 # Perform the split and conversion
 print("start")

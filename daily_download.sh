@@ -1,9 +1,15 @@
 #!/bin/bash
 
+# Remove previous files
+
+rm  /root/updates/*
+
 # Source the conda environment
+
 source /root/dnsenv/bin/activate
 
-# Run the Python script
+# Run the Python script to download daily file
+
 python3 /root/dnsproject/download_daily.py
 
 # Check if script1.py executed successfully
