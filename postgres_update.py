@@ -2,12 +2,12 @@ import duckdb
 import timeit
 import glob
 
-directory = "~/"
-directory2 = "~/refresh/"
+directory = "/root/"
+directory2 = "/root/refresh/"
 db = "domains_all_postgres.duckdb"
 
 con = duckdb.connect(directory + db)
-# DESCRIBEfiles = glob.glob(directory2 + "*.parquet")
+print("Connected to DuckDB")
 
 stage1 = """CREATE TABLE IF NOT EXISTS domains_stage1 (
     domain VARCHAR PRIMARY KEY,
@@ -45,6 +45,7 @@ query = """CREATE OR REPLACE TABLE domains_stage2 AS SELECT
     LEFT JOIN mx_status l3 on l1.mx_domain = l3.mx_domain
     LEFT JOIN phishing l4 on l1.domain = l4.domain
     LEFT JOIN asn_ip4 l5 on l1.ip_int between l5.start_int and l5.end_int
+    LEFT JOIN create_date l6 ON l1.domain = l6.domain
     ;"""
 
 flag = """UPDATE domains_stage2 SET spf_flag = CASE
