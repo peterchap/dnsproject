@@ -27,7 +27,6 @@ resolver.lifetime = 2.0
 resolver.timeout = 2.0
 
 
-
 def formatter(log: dict) -> str:
     """
     Format log colors based on level.
@@ -72,7 +71,7 @@ def create_logger():
     :returns: custom_logger
     """
     directory = "/root/"
-    #directory = "/home/peter/Documents/updates/"
+    # directory = "/home/peter/Documents/updates/"
     custom_logger.remove()
     custom_logger.add(directory + "dnslog.log", colorize=True)
     return custom_logger
@@ -83,11 +82,13 @@ date = datetime.datetime.now().strftime("%Y-%m-%d")
 LOGGER.info(f"Start time: {date}")
 # Convert IP addresses to integers for comparison
 
+
 def ip_to_int(ip):
     if ip != ip:
         return None
     else:
         return int(ipaddress.ip_address(ip))
+
 
 async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
@@ -145,21 +146,21 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     """
 
     valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
-    domain = valid_pattern.sub("", domain)
+    domain = valid_pattern.sub("", domain).lower()
     suffix = extract_suffix(domain)
     a, ip_int = await get_A(domain)
-    if a  == "None":
-       ptr  = "None"
+    if a == "None":
+        ptr = "None"
     else:
-       ptr = await get_ptr(a.split(", ")[0])
+        ptr = await get_ptr(a.split(", ")[0])
     cname = await get_cname(domain)
     mx, mx_domain, mx_suffix = await get_mx(domain)
     if mx == "None":
-       spf = "None"
-       dmarc = "None"
+        spf = "None"
+        dmarc = "None"
     else:
-       spf = await get_spf(domain)
-       dmarc = await get_dmarc(domain)
+        spf = await get_spf(domain)
+        dmarc = await get_dmarc(domain)
     www, www_ptr, www_cname = await get_www(domain)
     (
         mail_a,
@@ -252,7 +253,7 @@ async def get_ns(domain):
         ns = listToString(ns).rstrip(",")
     except Exception as e:
         ns = e
-    return ns
+    return ns.lower()
 
 
 async def get_cname(domain):
@@ -266,7 +267,7 @@ async def get_cname(domain):
         cname = "None"
     except Exception as e:
         cname = "None"
-    return cname
+    return cname.lower()
 
 
 async def get_mx(domain):
@@ -275,7 +276,7 @@ async def get_mx(domain):
         mx = []
         for rr in result:
             mx.append(f"{rr.preference}, {rr.exchange}")
-        mx = mxToString(mx).rstrip(", ")
+        mx = mxToString(mx).rstrip(", ").lower()
         split = mx.split(":")[1].strip().split(",")[0]
         mx_domain, suffix = extract_registered_domain(split)
     except Exception as e:
@@ -289,7 +290,7 @@ async def get_ptr(ip):
     try:
         result = await resolver.resolve_address(ip)
         for rr in result:
-          ptr = (f"{rr}")
+            ptr = f"{rr}"
         if ptr == ip:
             return "None"
     except Exception as e:
@@ -305,7 +306,7 @@ async def get_www(domain):
         www_ptr = await get_ptr(www)
     www_cname = await get_cname("www." + domain)
 
-    return www, www_ptr, www_cname
+    return www, www_ptr, www_cname.lower()
 
 
 async def get_mail(domain):
@@ -351,7 +352,6 @@ async def get_dmarc(domain):
     except Exception as e:
         dmarc = "None"
     return dmarc
-
 
 
 if __name__ == "__main__":
