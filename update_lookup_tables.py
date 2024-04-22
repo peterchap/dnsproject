@@ -40,7 +40,7 @@ def update_malware_domains():
     print("Malware domains updated")
 
 
-def update_mx_status_table():
+def update_mx_status_table(directory):
     # Update the mx_status table
     data = directory + "mx_status.csv"
     df3 = pl.read_csv(data, has_header=True).cast(
@@ -55,7 +55,7 @@ def update_mx_status_table():
     print("MX status updated")
 
 
-def update_webmail_table():
+def update_webmail_table(directory):
     # Update the webmail table
     data = directory + "webmail_domain_list.csv"
     df4 = pl.read_csv(data, has_header=True).cast({"is_webmail": pl.Boolean})
@@ -64,7 +64,7 @@ def update_webmail_table():
     print("Webmail updated")
 
 
-def update_mx_suffix_table():
+def update_mx_suffix_table(directory):
     # Update the mx_suffix table
     data = directory + "mx_suffix_status_lookup.csv"
     df5 = pl.read_csv(data, has_header=True)
@@ -73,7 +73,7 @@ def update_mx_suffix_table():
     print("MX suffix updated")
 
 
-def update_asn_lookup_table():
+def update_asn_lookup_table(directory):
     # Update the asn_status table
     data = directory + "asn-ip4_ips.csv"
     df6 = pl.read_csv(data, has_header=True)
@@ -82,7 +82,7 @@ def update_asn_lookup_table():
     print("ASN lookup updated")
 
 
-def update_tld_lookup_table():
+def update_tld_lookup_table(directory):
     # Update the tld_status table
     data = directory + "tld-lookup.csv"
     df7 = pl.read_csv(data, has_header=True)
@@ -101,7 +101,7 @@ def update_top_million():
         zip_file.open("top-1m.csv").read(),
         has_header=False,
         new_columns=["top_domain_rank", "domain"],
-        dtypes = {"top_domain_rank" : pl.Int32, "domain" : pl.String}
+        dtypes={"top_domain_rank": pl.Int32, "domain": pl.String},
     )
     print(df8.shape)
     # Insert df8 into the top-1m table in duckdb
@@ -130,11 +130,11 @@ db_name = "domains_all_postgres.duckdb"
 conn = duckdb.connect(directory2 + db_name)
 update_phishing_domains()
 update_malware_domains()
-update_webmail_table()
-update_mx_suffix_table()
-update_asn_lookup_table()
-update_mx_status_table()
-update_tld_lookup_table()
+update_webmail_table(directory)
+update_mx_suffix_table(directory)
+update_asn_lookup_table(directory)
+update_mx_status_table(directory)
+update_tld_lookup_table(directory)
 update_top_million()
 create_date_table()
 print("All tables updated")
