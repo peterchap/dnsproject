@@ -87,7 +87,7 @@ def update_tld_lookup_table():
     data = directory + "tld-lookup.csv"
     df7 = pl.read_csv(data, has_header=True)
     # Insert df7 into the tld_status table in duckdb
-    conn.sql("CREATE OR REPLACE TABLE tld_status AS SELECT * FROM df7")
+    conn.sql("CREATE OR REPLACE TABLE tld_lookup AS SELECT * FROM df7")
     print("TLD lookup updated")
 
 
@@ -101,6 +101,7 @@ def update_top_million():
         zip_file.open("top-1m.csv").read(),
         has_header=False,
         new_columns=["top_domain_rank", "domain"],
+        dtypes = {"top_domain_rank" : pl.Int32, "domain" : pl.String}
     )
     print(df8.shape)
     # Insert df8 into the top-1m table in duckdb
@@ -110,8 +111,8 @@ def update_top_million():
 
 def create_date_table():
     # Create the date table
-    con.sql(
-        "CREATE TABLE OR REPLACE create_date AS SELECT domain, create_date FROM read_parquet('/root/dnsresults/*.parquet')"
+    conn.sql(
+        "CREATE OR REPLACE TABLE create_date AS SELECT domain, create_date FROM read_parquet('/root/dnsresults/*.parquet')"
     )
     print("Date table created")
 
@@ -123,9 +124,10 @@ def extract_domain(domain):
 
 extract = tldextract.TLDExtract(include_psl_private_domains=True)
 extract.update()
-directory = "E:/domains-monitor/"
-db_name = "test.duckdb"
-conn = duckdb.connect(directory + db_name)
+directory = "/root/lookup/"
+directory2 = "/root/"
+db_name = "domains_all_postgres.duckdb"
+conn = duckdb.connect(directory2 + db_name)
 update_phishing_domains()
 update_malware_domains()
 update_webmail_table()
@@ -134,5 +136,5 @@ update_asn_lookup_table()
 update_mx_status_table()
 update_tld_lookup_table()
 update_top_million()
-# create_date_table()
+create_date_table()
 print("All tables updated")
