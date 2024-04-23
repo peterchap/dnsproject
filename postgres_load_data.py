@@ -47,7 +47,8 @@ stage1 = """CREATE TABLE IF NOT EXISTS db.public.domains_all_2 (
     mail_ptr VARCHAR,
     top_domain_rank INTEGER,
     create_date DATETIME,
-    refresh_date DATETIME)"""
+    refresh_date DATETIME,
+    is_spf_block BOOLEAN,)"""
 
 data = """ COPY db.public.domains_all_2 FROM 'root/refresh/*processed.parquet';"""
 
