@@ -102,11 +102,15 @@ class DomainDataSchema(BaseModel):
     mbp: str
     type: str
     country: str
+    wm_country: str
+    wm_group: str
     mx_status_flag: str
-    mailable: bool
-    disposable: bool
-    known_mbp: bool
-    phishing: str
+    is_mailable: bool
+    is_disposable: bool
+    is_known_mbp: bool
+    is_phishing: str
+    is_malware: str
+    is_webmail: bool
     www: str
     www_ptr: str
     www_cname: str

@@ -53,6 +53,11 @@ stage1 = """CREATE TABLE IF NOT EXISTS db.public.domains_all (
     is_new_domain BOOLEAN
     decision_flag BOOLEAN)"""
 
+
+
+data = """ COPY db.public.domains_all_2 FROM 'root/refresh/*processed.parquet';"""
+
+
 data = """COPY db.public.domains_all FROM '/root/refresh/*processed.parquet';"""
 conn.sql("DELETE FROM db.public.domains_all;")
 conn.sql(stage1)
