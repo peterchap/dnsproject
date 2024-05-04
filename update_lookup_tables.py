@@ -8,7 +8,7 @@ from io import BytesIO
 
 def update_phishing_domains():
     # Update the phishing_domains table
-    url2 = "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt"
+    url2 = "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/ALL-phishing-domains.txt"
     df1 = pl.read_csv(url2, has_header=False, new_columns=["full_domain"])
     print(df1.shape)
     df1 = df1.with_columns(

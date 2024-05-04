@@ -63,8 +63,6 @@ spf_block = """UPDATE domains_stage2 SET is_spf_block = CASE
 
 parked = """UPDATE domains_stage2 SET is_parked = CASE
 	    WHEN mx_status_flag = 'Parked Domain' THEN 1
-            WHEN www_cname LIKE '%park%' THEN 1
-            WHEN ns LIKE '%cashparking.com%' THEN 1
             END;""" 
 
 age = """UPDATE domains_stage2 SET is_new_domain = CASE
@@ -90,16 +88,6 @@ suffix_country = """UPDATE domains_stage2
                     SET country = mx_suffix.country
                     from mx_suffix
                     WHERE mx_suffix = mx_suffix.suffix;"""
-
-overall_flag = """UPDATE domains_stage2 SET decision_flag = CASE
-                  WHEN mx_status_flag IN ('Spam Trap', 'Disposable', 'Dormant', 'Parked Domain', 'Phishing', 'Suspicious', 'Testing', 'Typo Domain')  THEN 0
-                  WHEN is_spf_block = 1 THEN 0
-                  WHEN is_parked = 1 THEN 0
-                  WHEN is_malware = 1 THEN 0
-                  WHEN is_phishing = 1 THEN 0
-                  WHEN is_disposable = 1 THEN 0
-                  ELSE 1
-                  END;"""
 
 uniques = """CREATE OR REPLACE TABLE domains_stage3 AS SELECT
              DISTINCT ON(domain) * FROM domains_stage2;"""
@@ -127,7 +115,6 @@ for file in files:
     con.sql("ALTER TABLE domains_stage2 ADD COLUMN is_spf_block BOOLEAN DEFAULT 0;")
     con.sql("ALTER TABLE domains_stage2 ADD COLUMN is_parked BOOLEAN DEFAULT 0;")
     con.sql("ALTER TABLE domains_stage2 ADD COLUMN is_new_domain BOOLEAN DEFAULT 0;")
-    con.sql("ALTER TABLE domains_stage2 ADD COLUMN decision_flag BOOLEAN DEFAULT 1;")
     con.sql(spf_block)
     con.sql(parked)
     con.sql(age)

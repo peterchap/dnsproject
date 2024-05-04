@@ -5,9 +5,9 @@ conn = duckdb.connect()
 conn.sql(
     """ATTACH 'dbname=domains_final user=postgres password=1Francis2 host=82.208.21.122' AS db (TYPE POSTGRES);"""
 )
-print(conn.sql("""DESCRIBE db.public.domains_all;"""))
+#print(conn.sql("""DESCRIBE db.public.domains_all;"""))
 
-stage1 = """CREATE TABLE IF NOT EXISTS db.public.domains_all_2 (
+stage1 = """CREATE TABLE IF NOT EXISTS db.public.domains_all (
     domain VARCHAR,
     ns VARCHAR,
     suffix VARCHAR,
@@ -47,13 +47,17 @@ stage1 = """CREATE TABLE IF NOT EXISTS db.public.domains_all_2 (
     mail_ptr VARCHAR,
     top_domain_rank INTEGER,
     create_date DATETIME,
-    refresh_date DATETIME)"""
+    refresh_date DATETIME,
+    is_spf_block BOOLEAN,
+    is_parked BOOLEAN,
+    is_new_domain BOOLEAN
+    decision_flag BOOLEAN)"""
 
-data = """ COPY db.public.domains_all_2 FROM 'root/refresh/*processed.parquet';"""
-
+data = """COPY db.public.domains_all FROM '/root/refresh/*processed.parquet';"""
+conn.sql("DELETE FROM db.public.domains_all;")
 conn.sql(stage1)
-print("domains_all_2 done")
-print(conn.sql("""DESCRIBE db.public.domains_all_2;"""))
+print("domains_all done")
+print(conn.sql("""DESCRIBE db.public.domains_all;"""))
 conn.sql(data)
 print("data done")
-print(conn.sql("""SELECT COUNT(*) FROM db.public.domains_all_2;"""))
+print(conn.sql("""SELECT COUNT(*) FROM db.public.domains_all;"""))
