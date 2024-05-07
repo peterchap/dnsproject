@@ -50,7 +50,7 @@ stage1 = """CREATE TABLE IF NOT EXISTS db.public.domains_all (
     refresh_date DATETIME,
     is_spf_block BOOLEAN,
     is_parked BOOLEAN,
-    is_new_domain BOOLEAN
+    is_new_domain BOOLEAN,
     decision_flag BOOLEAN)"""
 
 

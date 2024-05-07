@@ -294,7 +294,7 @@ async def get_ptr(ip):
         if ptr == ip:
             return "None"
     except Exception as e:
-        return "None"
+        return None
     return ptr.rstrip(".")
 
 
@@ -357,8 +357,6 @@ async def get_dmarc(domain):
 if __name__ == "__main__":
     directory = "/root/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
-    extract.update()
-    # bucket_name = "domain-monitor-results"
     file_key = "dns_input.parquet"
     table = pq.read_table(directory + file_key)
     allurls = table["domain"].to_pylist()

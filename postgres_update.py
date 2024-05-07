@@ -91,6 +91,13 @@ suffix_country = """UPDATE domains_stage2
                     from mx_suffix
                     WHERE mx_suffix = mx_suffix.suffix;"""
 
+mailable = """UPDATE domains_stage2 SET is_mailable = CASE
+              WHEN mx_domain IS NOT NULL THEN 1
+              WHEN mail_mx_domain IS NOT NULL THEN 1
+              WHEN ptr IS NOT NULL THEN 1
+              ELSE 0
+              END;"""
+
 overall_flag = """UPDATE domains_stage2 SET decision_flag = CASE
                   WHEN mx_status_flag IN ('Spam Trap', 'Disposable', 'Dormant', 'Parked Domain', 'Phishing', 'Suspicious', 'Testing', 'Typo Domain')  THEN 0
                   WHEN is_spf_block = 1 THEN 0
@@ -136,6 +143,8 @@ for file in files:
     con.sql(suffix_type)
     con.sql(suffix_country)
     con.sql(suffix_type)
+    cons.sql(mailable)
+    con.sql(overall_flag)
     con.sql(uniques)
     con.execute(output_copy)
     print(file + " end: ", timeit.default_timer())
