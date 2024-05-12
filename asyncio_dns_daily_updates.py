@@ -1,23 +1,25 @@
 import asyncio
 import dns.asyncresolver
-import ipaddress
 import time
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import re
+import csv
+import ipaddress
 import tldextract
-import os
 import datetime
+from time import perf_counter as timer
 from typing import List
 from loguru import logger as custom_logger
-
-from datetime import date
+from pyarrow import csv
+from io import BytesIO
 from aiolimiter import AsyncLimiter
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0"
+    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0"
 }
 
-# dns_provider = ["192.168.1.221"]
 dns_provider = ["127.0.0.1"]
 resolver = dns.asyncresolver.Resolver()
 resolver.nameservers = dns_provider
@@ -64,7 +66,7 @@ def formatter(log: dict) -> str:
 
 
 def create_logger():
-    """dn
+    """
     Create custom logger.
     :returns: custom_logger
     """
@@ -75,13 +77,17 @@ def create_logger():
 
 
 LOGGER = create_logger()
-date = date.today().strftime("%Y-%m-%d")
+date = datetime.datetime.now().strftime("%Y-%m-%d")
+LOGGER.info(f"Start time: {date}")
+# Convert IP addresses to integers for comparison
+
 
 def ip_to_int(ip):
     if ip != ip:
         return None
     else:
         return int(ipaddress.ip_address(ip))
+
 
 async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
@@ -97,6 +103,7 @@ async def execute_fetcher_tasks(
         results = []
         keys = [
             "domain",
+            "ns1",
             "suffix",
             "a",
             "ip_int",
@@ -108,8 +115,8 @@ async def execute_fetcher_tasks(
             "spf",
             "dmarc",
             "www",
-            "wwwptr",
-            "wwwcname",
+            "www_ptr",
+            "www_cname",
             "mail_a",
             "mail_mx",
             "mail_mx_domain",
@@ -117,7 +124,6 @@ async def execute_fetcher_tasks(
             "mail_spf",
             "mail_dmarc",
             "mail_ptr",
-            "create_date",
             "refresh_date",
         ]
         for t in tasks:
@@ -125,11 +131,7 @@ async def execute_fetcher_tasks(
             res = {keys[y]: data[y] for y in range(23)}
             results.append(res)
         df = pd.DataFrame(results)
-        df["create_date"] = pd.to_datetime(df["create_date"])
         df["refresh_date"] = pd.to_datetime(df["refresh_date"])
-        # (print("check ", df.shape))
-        # LOGGER.success(
-        #  f"Executed Batch in {time.perf_counter() - start_time:0.2f} seconds.")
     return df
 
 
@@ -144,21 +146,22 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     """
 
     valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
-    domain = valid_pattern.sub("", domain)
+    domain = valid_pattern.sub("", domain).lower()
     suffix = extract_suffix(domain)
+    ns1 = await get_ns(domain)
     a, ip_int = await get_A(domain)
-    if a  == "None":
-       ptr  = "None"
+    if a == "None":
+        ptr = "None"
     else:
-       ptr = await get_ptr(a.split(", ")[0])
+        ptr = await get_ptr(a.split(", ")[0])
     cname = await get_cname(domain)
     mx, mx_domain, mx_suffix = await get_mx(domain)
     if mx == "None":
-       spf = "None"
-       dmarc = "None"
+        spf = "None"
+        dmarc = "None"
     else:
-       spf = await get_spf(domain)
-       dmarc = await get_dmarc(domain)
+        spf = await get_spf(domain)
+        dmarc = await get_dmarc(domain)
     www, www_ptr, www_cname = await get_www(domain)
     (
         mail_a,
@@ -169,13 +172,11 @@ async def fetch_url(domain: str, filename: str, total_count: int):
         mail_dmarc,
         mail_ptr,
     ) = await get_mail(domain)
-    create_date = await get_create_date(filename)
     refresh_date = datetime.datetime.now()
-
-    # LOGGER.info(f"Processed {batch +i+1} of {total_count} URLs.")
 
     return [
         domain,
+        ns1,
         suffix,
         a,
         ip_int,
@@ -196,7 +197,6 @@ async def fetch_url(domain: str, filename: str, total_count: int):
         mail_spf,
         mail_dmarc,
         mail_ptr,
-        create_date,
         refresh_date,
     ]
 
@@ -254,7 +254,7 @@ async def get_ns(domain):
             ns.append(rr.to_text().rstrip("."))
         ns = listToString(ns).rstrip(",")
     except Exception as e:
-        ns = e
+        ns = "error"
     return ns
 
 
@@ -269,7 +269,7 @@ async def get_cname(domain):
         cname = "None"
     except Exception as e:
         cname = "None"
-    return cname
+    return cname.lower()
 
 
 async def get_mx(domain):
@@ -278,7 +278,7 @@ async def get_mx(domain):
         mx = []
         for rr in result:
             mx.append(f"{rr.preference}, {rr.exchange}")
-        mx = mxToString(mx).rstrip(", ")
+        mx = mxToString(mx).rstrip(", ").lower()
         split = mx.split(":")[1].strip().split(",")[0]
         mx_domain, suffix = extract_registered_domain(split)
     except Exception as e:
@@ -292,11 +292,11 @@ async def get_ptr(ip):
     try:
         result = await resolver.resolve_address(ip)
         for rr in result:
-          ptr = (f"{rr}")
+            ptr = f"{rr}"
         if ptr == ip:
             return "None"
     except Exception as e:
-        return "None"
+        return None
     return ptr.rstrip(".")
 
 
@@ -308,14 +308,14 @@ async def get_www(domain):
         www_ptr = await get_ptr(www)
     www_cname = await get_cname("www." + domain)
 
-    return www, www_ptr, www_cname
+    return www, www_ptr, www_cname.lower()
 
 
 async def get_mail(domain):
     mail_a, mailint = await get_A("mail." + domain)
     mail_mx, mail_mx_domain, mail_suffix = await get_mx("mail." + domain)
     if mail_a != "None":
-        mail_ptr = await get_ptr(mail_a.split(", ")[0])
+        mail_ptr = await get_ptr(mail_a)
     else:
         mail_ptr = "None"
     if mail_mx == "None":
@@ -356,36 +356,76 @@ async def get_dmarc(domain):
     return dmarc
 
 
-async def get_create_date(filename):
-    date_format = "%Y-%m-%d"
-    x = filename.split(".")[0]
-    b = x[19:29]
-    date = str(datetime.datetime.strptime(b, date_format))
-    return date
-
-
 if __name__ == "__main__":
-    print("Starting...")
-    directory = "/root/updates/"
-    output = "/root/dnsresults/"
+    directory = "/root/"
     extract = tldextract.TLDExtract(include_psl_private_domains=True)
-    extract.update()
+    file_key = "dns_input.parquet"
+    table = pq.read_table(directory + file_key)
+    allurls = table["domain"].to_pylist()
+    urls_to_fetch = [
+        value.rstrip(".") if isinstance(value, str) else value for value in allurls
+    ]
+    print(len(urls_to_fetch))
+    len = len(urls_to_fetch)
     start_time = time.time()
-
-    final = pd.DataFrame()
-    for file in os.listdir(directory):
-        print(file)
-        df = pd.read_parquet(directory + file, engine="pyarrow", columns=["domain", "ip", "country"])
-        print("check 1 ", df.shape)
-        df.rename(columns={"country": "country-dm"}, inplace=True)
-        urls_to_fetch = df["domain"].tolist()
-        len = df.shape[0]
-        results = asyncio.run(execute_fetcher_tasks(urls_to_fetch, file, len))
-        print("check 2 ", results.shape)
-        final = pd.merge(df, results, on="domain", how="left")
-        print("check 3 ", final.shape)
-        final.to_parquet(output + "processed_" + file, engine="pyarrow")
-        LOGGER.success(f"Executed Batch in {time.time() - start_time:0.2f} seconds.")
+    LOGGER.info(f"Start time: {start_time}")
+    start = 0
+    # end = 0
+    schema = pa.schema(
+        [
+            pa.field("domain", pa.string()),
+            pa.field("ns", pa.string()),
+            pa.field("ns1, pa.string()),
+            pa.field("ip", pa.string()),
+            pa.field("country-dm", pa.string()),
+            pa.field("suffix", pa.string()),
+            pa.field("a", pa.string()),
+            pa.field("ip_int", pa.int64()),
+            pa.field("ptr", pa.string()),
+            pa.field("cname", pa.string()),
+            pa.field("mx", pa.string()),
+            pa.field("mx_domain", pa.string()),
+            pa.field("mx_suffix", pa.string()),
+            pa.field("spf", pa.string()),
+            pa.field("dmarc", pa.string()),
+            pa.field("www", pa.string()),
+            pa.field("www_ptr", pa.string()),
+            pa.field("www_cname", pa.string()),
+            pa.field("mail_a", pa.string()),
+            pa.field("mail_mx", pa.string()),
+            pa.field("mail_mx_domain", pa.string()),
+            pa.field("mail_mx_suffix", pa.string()),
+            pa.field("mail_spf", pa.string()),
+            pa.field("mail_dmarc", pa.string()),
+            pa.field("mail_ptr", pa.string()),
+            pa.field("refresh_date", pa.timestamp("ns")),
+        ]
+    )
+    with pa.OSFile(directory + "domains_all.arrow", "wb") as sink:
+        with pa.ipc.new_stream(sink, schema) as writer:
+            start = 0
+            batchcount = 0
+            offset = 0
+            step = 50000
+            for i in range(0, len, step):
+                df = asyncio.run(
+                    execute_fetcher_tasks(
+                        urls_to_fetch[start : i + step], batchcount, len
+                    )
+                )
+                dmdata = table[offset : offset + step].to_pandas()
+                df = pd.merge(dmdata, df, on="domain", how="left")
+                batch = pa.RecordBatch.from_pandas(df, schema=schema)
+                writer.write_batch(batch)
+                start = i + step
+                batchcount = batchcount + step
+                offset = offset + step
+                LOGGER.success(
+                    f"Executed Batch {i} of {len} in {time.time() - start_time:0.2f} seconds."
+                )
+    LOGGER.info(f"Finish Time: {time.time()}")
+    LOGGER.info(f"Elaspsed time: {time.time() - start_time}")
+    print("Elapsed time: ", time.time() - start_time)
     
     LOGGER.success(f"completed in {time.time() - start_time:0.2f} seconds.")
     print("Elapsed time: ", time.time() - start_time)
