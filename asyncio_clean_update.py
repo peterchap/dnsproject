@@ -105,6 +105,7 @@ async def execute_fetcher_tasks(
         keys = [
             "domain",
             "suffix",
+            "ns",
             "a",
             "ip_int",
             "ptr",
@@ -128,7 +129,7 @@ async def execute_fetcher_tasks(
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(22)}
+            res = {keys[y]: data[y] for y in range(23)}
             results.append(res)
         df = pd.DataFrame(results)
         df["refresh_date"] = pd.to_datetime(df["refresh_date"])
@@ -148,6 +149,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
     domain = valid_pattern.sub("", domain).lower()
     suffix = extract_suffix(domain)
+    ns = await get_ns(domain)
     a, ip_int = await get_A(domain)
     if a == "None":
         ptr = "None"
@@ -176,6 +178,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     return [
         domain,
         suffix,
+        ns,
         a,
         ip_int,
         ptr,
@@ -252,8 +255,8 @@ async def get_ns(domain):
             ns.append(rr.to_text().rstrip("."))
         ns = listToString(ns).rstrip(",")
     except Exception as e:
-        ns = e
-    return ns.lower()
+        ns = "No Result"
+    return ns
 
 
 async def get_cname(domain):
@@ -373,8 +376,8 @@ if __name__ == "__main__":
         [
             pa.field("domain", pa.string()),
             pa.field("ns", pa.string()),
-            pa.field("ip", pa.string()),
-            pa.field("country-dm", pa.string()),
+            #pa.field("ip", pa.string()),
+            #pa.field("country-dm", pa.string()),
             pa.field("suffix", pa.string()),
             pa.field("a", pa.string()),
             pa.field("ip_int", pa.int64()),

@@ -3,7 +3,7 @@ import timeit
 import glob
 
 directory = "/root/"
-directory2 = "/root/refresh/"
+directory2 = "/root/"
 db = "domains_all_postgres.duckdb"
 
 con = duckdb.connect(directory + db)
@@ -12,8 +12,6 @@ print("Connected to DuckDB")
 stage1 = """CREATE TABLE IF NOT EXISTS domains_stage1 (
     domain VARCHAR,
     ns VARCHAR,
-    ip VARCHAR,
-    country_dm VARCHAR,
     suffix VARCHAR,
     a VARCHAR,
     ip_int BIGINT,
@@ -65,6 +63,8 @@ parked = """UPDATE domains_stage2 SET is_parked = CASE
 	    WHEN mx_status_flag = 'Parked Domain' THEN 1
             WHEN www_cname LIKE '%park%' THEN 1
             WHEN ns LIKE '%cashparking.com%' THEN 1
+            WHEN ns LIKE '%sedo%' THEN 1
+            WHEN ns LIKE '%bodis%' THEN 1
             END;""" 
 
 age = """UPDATE domains_stage2 SET is_new_domain = CASE
@@ -111,40 +111,36 @@ overall_flag = """UPDATE domains_stage2 SET decision_flag = CASE
 uniques = """CREATE OR REPLACE TABLE domains_stage3 AS SELECT
              DISTINCT ON(domain) * FROM domains_stage2;"""
 
-files = glob.glob(directory2 + "*refresh.parquet")
-for file in files:
-    print(file)
-    #file2 = file.split("\\")[1]
-    data = f"INSERT INTO domains_stage1 SELECT * FROM '{file}';"
-    output = file.split("_")[0] + "_processed.parquet"
-    print(output)
-    output_copy = "COPY domains_stage3 TO '{}' (FORMAT PARQUET)".format(output)
-    print(file + " start: ", timeit.default_timer())
-    con = duckdb.connect(directory + db)
-    con.sql("""DROP TABLE IF EXISTS domains_stage1;""")
+file = directory + 'domains_all.parquet'
+data = f"INSERT INTO domains_stage1 SELECT * FROM '{file}';"
+output = file.split("_")[0] + "_processed.parquet"
+output_copy = "COPY domains_stage3 TO '{}' (FORMAT PARQUET)".format(output)
+print(file + " start: ", timeit.default_timer())
+con = duckdb.connect(directory + db)
+con.sql("""DROP TABLE IF EXISTS domains_stage1;""")
 
-    con.sql(stage1)
+con.sql(stage1)
 
-    con.sql(data)
-    # con.sql("SELECT COUNT(*) FROM domains_stage1;")
-    print("domains_stage1 done")
+con.sql(data)
 
-    con.sql(query)
+print("domains_stage1 done")
 
-    con.sql("ALTER TABLE domains_stage2 ADD COLUMN is_spf_block BOOLEAN DEFAULT 0;")
-    con.sql("ALTER TABLE domains_stage2 ADD COLUMN is_parked BOOLEAN DEFAULT 0;")
-    con.sql("ALTER TABLE domains_stage2 ADD COLUMN is_new_domain BOOLEAN DEFAULT 0;")
-    con.sql("ALTER TABLE domains_stage2 ADD COLUMN decision_flag BOOLEAN DEFAULT 1;")
-    con.sql(spf_block)
-    con.sql(parked)
-    con.sql(age)
-    con.sql(suffix_flag)
-    con.sql(suffix_mbp)
-    con.sql(suffix_type)
-    con.sql(suffix_country)
-    con.sql(suffix_type)
-    con.sql(mailable)
-    con.sql(overall_flag)
-    con.sql(uniques)
-    con.execute(output_copy)
-    print(file + " end: ", timeit.default_timer())
+con.sql(query)
+
+con.sql("ALTER TABLE domains_stage2 ADD COLUMN is_spf_block BOOLEAN DEFAULT 0;")
+con.sql("ALTER TABLE domains_stage2 ADD COLUMN is_parked BOOLEAN DEFAULT 0;")
+con.sql("ALTER TABLE domains_stage2 ADD COLUMN is_new_domain BOOLEAN DEFAULT 0;")
+con.sql("ALTER TABLE domains_stage2 ADD COLUMN decision_flag BOOLEAN DEFAULT 1;")
+con.sql(spf_block)
+con.sql(parked)
+con.sql(age)
+con.sql(suffix_flag)
+con.sql(suffix_mbp)
+con.sql(suffix_type)
+con.sql(suffix_country)
+con.sql(suffix_type)
+con.sql(mailable)
+con.sql(overall_flag)
+con.sql(uniques)
+con.execute(output_copy)
+print(file + " end: ", timeit.default_timer())
