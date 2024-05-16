@@ -45,7 +45,7 @@ query = """CREATE OR REPLACE TABLE domains_stage2 AS SELECT
     l1.www, l1.www_ptr, l1.www_cname, l1.mail_a, l1.mail_mx, l1.mail_mx_domain, 
     l1.mail_mx_suffix, l1.mail_spf, l1.mail_dmarc, l1.mail_ptr, l7.top_domain_rank, l9.create_date, l1.refresh_date 
     FROM domains_stage1 l1 
-    LEFT JOIN tld_lookup l2 ON split_part(l1.suffix,'.',2) = l2.tld1 
+    LEFT JOIN tld_lookup l2 ON l1.suffix = l2.tld1 
     LEFT JOIN mx_status l3 on l1.mx_domain = l3.mx_domain
     LEFT JOIN phishing_domains l4 on l1.domain = l4.domain
     LEFT JOIN malware_domains l5 on l1.domain = l5.domain
@@ -65,6 +65,11 @@ parked = """UPDATE domains_stage2 SET is_parked = CASE
 	    WHEN mx_status_flag = 'Parked Domain' THEN 1
             WHEN www_cname LIKE '%park%' THEN 1
             WHEN ns LIKE '%cashparking.com%' THEN 1
+            WHEN ns LIKE '%sedo%' THEN 1
+            WHEN ns LIKE '%bodis%' THEN 1
+            WHEN a LIKE '%3.33.130.190%' THEN 1
+            WHEN a LIKE '%13.248.213.45%' THEN 1
+            ELSE 0
             END;""" 
 
 age = """UPDATE domains_stage2 SET is_new_domain = CASE
@@ -81,7 +86,7 @@ suffix_mbp = """UPDATE domains_stage2
                 FROM mx_suffix
                 WHERE mx_suffix = mx_suffix.suffix;"""
 
-suffix_type = """UPDATE  domains_stage2
+suffix_type = """UPDATE domains_stage2
                     SET type = mx_suffix.type
                     FROM mx_suffix
                     WHERE mx_suffix = mx_suffix.suffix;"""
@@ -111,11 +116,18 @@ overall_flag = """UPDATE domains_stage2 SET decision_flag = CASE
 uniques = """CREATE OR REPLACE TABLE domains_stage3 AS SELECT
              DISTINCT ON(domain) * FROM domains_stage2;"""
 
+update_suffix = """UPDATE domains_stage1 
+                   SET suffix = df.new_suffix 
+                   FROM df;"""
+
 files = glob.glob(directory2 + "*refresh.parquet")
 for file in files:
     print(file)
-    #file2 = file.split("\\")[1]
+    #read into polars convert suffix .split('.')[-1]
     data = f"INSERT INTO domains_stage1 SELECT * FROM '{file}';"
+    df = con.sql("""SELECT suffix FROM domains_stage1;""")
+    df.with_columns(pl.col('suffix').str.split(by='.').list.get(-1)).alias('new_suffix')
+    con.sql(update_suffix)
     output = file.split("_")[0] + "_processed.parquet"
     print(output)
     output_copy = "COPY domains_stage3 TO '{}' (FORMAT PARQUET)".format(output)

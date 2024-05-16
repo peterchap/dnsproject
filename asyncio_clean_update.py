@@ -227,8 +227,9 @@ def extract_registered_domain(mx_record):
 
 
 def extract_suffix(domain):
-    result = extract(domain).suffix
-    return result
+    ans = extract(domain).suffix
+    result = ans.split('.')
+    return result[-1]
 
 
 async def get_A(domain):
