@@ -114,6 +114,7 @@ async def execute_fetcher_tasks(
             "mx_suffix",
             "spf",
             "dmarc",
+            "bimi",
             "www",
             "www_ptr",
             "www_cname",
@@ -128,7 +129,7 @@ async def execute_fetcher_tasks(
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(23)}
+            res = {keys[y]: data[y] for y in range(24)}
             results.append(res)
         df = pd.DataFrame(results)
         df["refresh_date"] = pd.to_datetime(df["refresh_date"])
@@ -162,6 +163,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     else:
         spf = await get_spf(domain)
         dmarc = await get_dmarc(domain)
+        bimi = await get_bimi(domain)
     www, www_ptr, www_cname = await get_www(domain)
     (
         mail_a,
@@ -187,6 +189,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
         mx_suffix,
         spf,
         dmarc,
+        bimi,
         www,
         www_ptr,
         www_cname,
@@ -330,9 +333,9 @@ async def get_mail(domain):
 
 
 async def get_spf(domain):
+    spf = None
     try:
         result = await resolver.resolve(domain, "TXT")
-        spf = None
         for rr in result:
             if "spf" in rr.to_text().lower():
                 spf = rr.to_text().strip('"')
@@ -344,9 +347,9 @@ async def get_spf(domain):
 
 
 async def get_dmarc(domain):
+    dmarc = None
     try:
         result = await resolver.resolve("_dmarc." + domain, "TXT")
-        dmarc = None
         for rr in result:
             if "dmarc" in rr.to_text().lower():
                 dmarc = rr.to_text().strip('"')
@@ -356,6 +359,15 @@ async def get_dmarc(domain):
         dmarc = "None"
     return dmarc
 
+async def get_bimi(domain):
+    bimi = None
+    try:
+        result = dns.resolver.resolve("default._bimi." + domain, "TXT")
+        for rr in result:
+            bimi = rr.to_text()
+    except Exception as e:
+        bimi = "None"
+    return bimi
 
 if __name__ == "__main__":
     directory = "/root/"
@@ -389,6 +401,7 @@ if __name__ == "__main__":
             pa.field("mx_suffix", pa.string()),
             pa.field("spf", pa.string()),
             pa.field("dmarc", pa.string()),
+            pa.field("bimi", pa.string()),
             pa.field("www", pa.string()),
             pa.field("www_ptr", pa.string()),
             pa.field("www_cname", pa.string()),
