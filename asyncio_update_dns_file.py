@@ -160,6 +160,7 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     if mx == "None":
         spf = "None"
         dmarc = "None"
+        bimi = "None"
     else:
         spf = await get_spf(domain)
         dmarc = await get_dmarc(domain)
