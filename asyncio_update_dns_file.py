@@ -341,7 +341,7 @@ async def get_spf(domain):
             if "spf" in rr.to_text().lower():
                 spf = rr.to_text().strip('"')
         if spf is None:
-            spf = "None"
+            spf = "No SPF"
     except Exception as e:
         spf = "None"
     return spf
@@ -355,7 +355,7 @@ async def get_dmarc(domain):
             if "dmarc" in rr.to_text().lower():
                 dmarc = rr.to_text().strip('"')
         if dmarc is None:
-            dmarc = "None"
+            dmarc = "No DMARC"
     except Exception as e:
         dmarc = "None"
     return dmarc
@@ -366,6 +366,8 @@ async def get_bimi(domain):
         result = dns.resolver.resolve("default._bimi." + domain, "TXT")
         for rr in result:
             bimi = rr.to_text()
+        if bimi is None:
+            dmarc = "No BIMI"
     except Exception as e:
         bimi = "None"
     return bimi
