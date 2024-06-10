@@ -93,7 +93,7 @@ async def execute_fetcher_tasks(
     urls_select: List[str], filename: str, total_count: int
 ):
     # start_time = timer()
-    limiter = AsyncLimiter(100, 1)
+    limiter = AsyncLimiter(80, 1)
     async with asyncio.TaskGroup() as g:
         tasks = set()
         for i, url in enumerate(urls_select):
