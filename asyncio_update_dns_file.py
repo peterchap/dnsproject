@@ -367,7 +367,7 @@ async def get_bimi(domain):
         for rr in result:
             bimi = rr.to_text()
         if bimi is None:
-            dmarc = "No BIMI"
+            bimi = "No BIMI"
     except Exception as e:
         bimi = "None"
     return bimi
