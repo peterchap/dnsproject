@@ -103,7 +103,6 @@ async def execute_fetcher_tasks(
         results = []
         keys = [
             "domain",
-            "ns1",
             "suffix",
             "a",
             "ip_int",
@@ -129,7 +128,7 @@ async def execute_fetcher_tasks(
         ]
         for t in tasks:
             data = await t
-            res = {keys[y]: data[y] for y in range(24)}
+            res = {keys[y]: data[y] for y in range(23)}
             results.append(res)
         df = pd.DataFrame(results)
         df["refresh_date"] = pd.to_datetime(df["refresh_date"])
@@ -149,7 +148,6 @@ async def fetch_url(domain: str, filename: str, total_count: int):
     valid_pattern = re.compile(r"[^a-zA-Z0-9.-]")
     domain = valid_pattern.sub("", domain).lower()
     suffix = extract_suffix(domain)
-    ns1 = await get_ns(domain)
     a, ip_int = await get_A(domain)
     if a == "None":
         ptr = "None"
@@ -179,7 +177,6 @@ async def fetch_url(domain: str, filename: str, total_count: int):
 
     return [
         domain,
-        ns1,
         suffix,
         a,
         ip_int,
@@ -391,7 +388,6 @@ if __name__ == "__main__":
         [
             pa.field("domain", pa.string()),
             pa.field("ns", pa.string()),
-            pa.field("ns1", pa.string()),
             pa.field("ip", pa.string()),
             pa.field("country_dm", pa.string()),
             pa.field("suffix", pa.string()),
